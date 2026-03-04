@@ -66,7 +66,7 @@ class SummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              "${Formatters.calories(caloriesTarget)} kcal",
+              Formatters.calories(caloriesTarget),
               style: GoogleFonts.poppins(
                 fontSize: 26,
                 fontWeight: FontWeight.w700,

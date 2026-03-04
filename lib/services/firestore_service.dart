@@ -163,6 +163,33 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  /// Save user-entered daily goals (water, steps, sleep) for a specific date.
+  Future<void> saveDailyGoals(
+      String uid, String date, double waterLiters, int steps, double sleepHours) async {
+    await _firestore
+        .collection(AppConstants.dailyGoalsCollection)
+        .doc(uid)
+        .collection('days')
+        .doc(date)
+        .set({
+      'waterLiters': waterLiters,
+      'steps': steps,
+      'sleepHours': sleepHours,
+      'date': date,
+    });
+  }
+
+  /// Get user-entered daily goals for a specific date. Returns null if not set.
+  Future<Map<String, dynamic>?> getDailyGoals(String uid, String date) async {
+    final snap = await _firestore
+        .collection(AppConstants.dailyGoalsCollection)
+        .doc(uid)
+        .collection('days')
+        .doc(date)
+        .get();
+    return snap.data();
+  }
+
   Future<void> saveStreak(String uid, {
     required int currentStreak,
     required int longestStreak,

@@ -18,6 +18,7 @@ class AppConstants {
   static const String streaksCollection = 'streaks';
   static const String weightLogsCollection = 'weight_logs';
   static const String deviceDataCollection = 'device_data';
+  static const String dailyGoalsCollection = 'daily_goals';
 
   // Streak thresholds (days)
   static const int bronzeDays = 7;

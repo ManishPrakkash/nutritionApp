@@ -29,6 +29,7 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/steps_provider.dart';
 import '../../streaks/screens/habit_tracker_screen.dart';
 import '../services/goal_service.dart';
+import '../widgets/daily_goals_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -61,8 +62,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Refresh streak providers
         ref.invalidate(currentStreakProvider);
         ref.invalidate(weeklyProgressProvider);
+        // Show daily goals dialog if not set today
+        if (mounted) await _checkDailyGoals(uid);
       }
     });
+  }
+
+  Future<void> _checkDailyGoals(String uid) async {
+    final today = DateTime.now().toIso8601String().split('T').first;
+    final existing = await FirestoreService.instance.getDailyGoals(uid, today);
+    if (existing != null) return; // Already set today
+    if (!mounted) return;
+    final prefs = ref.read(preferencesFutureProvider).valueOrNull;
+    final goals = GoalService.computeTodayGoals(
+      profile: ref.read(profileProvider).valueOrNull,
+      preferences: prefs,
+    );
+    await DailyGoalsDialog.show(
+      context,
+      uid: uid,
+      defaultWater: goals.waterLiters,
+      defaultSteps: goals.stepsTarget,
+      defaultSleep: goals.sleepHours,
+    );
   }
 
   @override

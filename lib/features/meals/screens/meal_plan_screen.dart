@@ -55,18 +55,6 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Nutritional Strategy'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              ref.invalidate(weeklyMealPlanProvider);
-              ref.invalidate(monthlyMealPlanProvider);
-              ref.invalidate(mealPlanProvider(_selectedDateForDaily));
-              ref.invalidate(mealPlanProvider(_today));
-            },
-            icon: const Icon(LucideIcons.refreshCw, size: 20),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: Column(
         children: [
@@ -171,10 +159,6 @@ class _WeeklyMealView extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Weekly Strategy', style: AppTypography.textTheme.titleMedium),
-              IconButton(
-                onPressed: () => ref.invalidate(weeklyMealPlanProvider),
-                icon: const Icon(LucideIcons.refreshCw, size: 16),
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -277,10 +261,6 @@ class _MonthlyMealView extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(monthLabel, style: AppTypography.textTheme.titleMedium),
-              IconButton(
-                onPressed: () => ref.invalidate(monthlyMealPlanProvider),
-                icon: const Icon(LucideIcons.refreshCw, size: 16),
-              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -297,27 +277,31 @@ class _MonthlyMealView extends ConsumerWidget {
             itemBuilder: (context, index) {
               final entry = planMap.entries.elementAt(index);
               final totalCal = entry.value.fold(0, (sum, meal) => sum + meal.calories);
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: premiumCardDecoration(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatShortDate(entry.key),
-                      style: AppTypography.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${entry.value.length} meals',
-                      style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '$totalCal kcal',
-                      style: AppTypography.textTheme.titleSmall?.copyWith(color: AppColors.primary),
-                    ),
-                  ],
+              return InkWell(
+                borderRadius: BorderRadius.circular(20),
+                onTap: () => _showDayMealsPopup(context, entry.key, entry.value),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: premiumCardDecoration(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _formatShortDate(entry.key),
+                        style: AppTypography.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${entry.value.length} meals',
+                        style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '$totalCal kcal',
+                        style: AppTypography.textTheme.titleSmall?.copyWith(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -333,6 +317,110 @@ class _MonthlyMealView extends ConsumerWidget {
     final date = DateTime.parse(dateStr);
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return '${months[date.month - 1]} ${date.day}';
+  }
+
+  void _showDayMealsPopup(BuildContext context, String dateStr, List<Meal> meals) {
+    final dateLabel = _formatShortDate(dateStr);
+    final totalCal = meals.fold(0, (sum, m) => sum + m.calories);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      backgroundColor: AppColors.surface,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  dateLabel,
+                  style: AppTypography.textTheme.titleMedium,
+                ),
+                Text(
+                  '$totalCal kcal',
+                  style: AppTypography.textTheme.titleSmall?.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ...meals.map((meal) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 6),
+                    decoration: BoxDecoration(
+                      color: _mealTypeColor(meal.mealType),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          meal.mealType.toUpperCase(),
+                          style: AppTypography.textTheme.labelSmall?.copyWith(
+                            color: AppColors.textMuted,
+                            letterSpacing: 1.2,
+                            fontSize: 10,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          meal.name,
+                          style: AppTypography.textTheme.titleSmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${meal.calories} kcal',
+                    style: AppTypography.textTheme.bodySmall?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _mealTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'breakfast': return AppColors.info;
+      case 'lunch': return AppColors.warning;
+      case 'dinner': return AppColors.success;
+      case 'night': return const Color(0xFF7C6DCD);
+      default: return AppColors.textMuted;
+    }
   }
 }
 
@@ -414,35 +502,15 @@ class _DailyViewState extends State<_DailyView> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Daily Calibration',
-                    style: AppTypography.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Target: ${widget.targetCal} kcal',
-                    style: AppTypography.textTheme.bodySmall,
-                  ),
-                ],
+              Text(
+                'Daily Calibration',
+                style: AppTypography.textTheme.titleSmall,
               ),
-              Row(
-                children: [
-                  Text(
-                    '$_totalCal',
-                    style: AppTypography.textTheme.headlineSmall?.copyWith(
-                      color: _totalCal <= widget.targetCal ? AppColors.success : AppColors.error,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    _totalCal <= widget.targetCal ? LucideIcons.checkCircle2 : LucideIcons.alertTriangle,
-                    color: _totalCal <= widget.targetCal ? AppColors.success : AppColors.error,
-                    size: 18,
-                  ),
-                ],
+              Text(
+                '$_totalCal kcal',
+                style: AppTypography.textTheme.headlineSmall?.copyWith(
+                  color: AppColors.primary,
+                ),
               ),
             ],
           ),

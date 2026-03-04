@@ -6,8 +6,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/workout.dart';
 import '../providers/workout_provider.dart';
-import '../../auth/providers/auth_provider.dart';
-import '../../../services/firestore_service.dart';
 
 class WorkoutScreen extends ConsumerStatefulWidget {
   const WorkoutScreen({super.key});
@@ -312,36 +310,23 @@ class _ExerciseTile extends StatelessWidget {
   }
 }
 
-class _MarkWorkoutDoneButton extends ConsumerWidget {
+class _MarkWorkoutDoneButton extends StatelessWidget {
   final WorkoutPlan plan;
   const _MarkWorkoutDoneButton({required this.plan});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final uid = ref.watch(authUserIdProvider);
-    final today = DateTime.now().toIso8601String().split('T').first;
+  Widget build(BuildContext context) {
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: () async {
-          if (uid == null) return;
-          await FirestoreService.instance.saveWorkoutLog(
-            uid, today, true, plan.durationMinutes,
-          );
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Workout marked as done!'),
-                backgroundColor: AppColors.success,
-              ),
-            );
-          }
-        },
+        onPressed: null,
         icon: const Icon(LucideIcons.checkCircle2, size: 18),
         label: const Text('Workout Complete!'),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.success,
+          disabledBackgroundColor: AppColors.success,
+          disabledForegroundColor: Colors.white,
           minimumSize: const Size.fromHeight(48),
         ),
       ),
