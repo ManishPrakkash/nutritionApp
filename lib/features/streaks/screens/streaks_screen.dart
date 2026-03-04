@@ -99,7 +99,7 @@ class StreaksScreen extends ConsumerWidget {
                       crossAxisCount: 3,
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
-                      childAspectRatio: 0.8,
+                      childAspectRatio: 0.72,
                     ),
                     itemCount: badges.length,
                     itemBuilder: (context, index) {
@@ -146,7 +146,9 @@ class _BadgeCard extends StatelessWidget {
           Text(
             badge.name,
             textAlign: TextAlign.center,
-            style: AppTypography.textTheme.bodyMedium?.copyWith(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.textTheme.bodySmall?.copyWith(
               color: isEarned ? AppColors.textPrimary : AppColors.textMuted,
             ),
           ),

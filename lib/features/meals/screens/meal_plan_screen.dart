@@ -120,6 +120,7 @@ class _DailyTabContent extends ConsumerWidget {
           return _DailyView(
             meals: meals,
             targetCal: targetCal,
+            date: selectedDate,
             leading: null,
           );
         }
@@ -128,6 +129,7 @@ class _DailyTabContent extends ConsumerWidget {
           data: (fallbackMeals) => _DailyView(
             meals: fallbackMeals,
             targetCal: targetCal,
+            date: selectedDate,
             leading: null,
           ),
           loading: () => const Center(
@@ -439,11 +441,13 @@ class _MonthlyMealView extends ConsumerWidget {
 class _DailyView extends StatefulWidget {
   final List<Meal> meals;
   final int targetCal;
+  final String date;
   final Widget? leading;
 
   const _DailyView({
     required this.meals,
     required this.targetCal,
+    required this.date,
     this.leading,
   });
 
@@ -515,6 +519,7 @@ class _DailyViewState extends State<_DailyView> {
             padding: const EdgeInsets.only(bottom: 20),
             child: _MealCard(
               meal: m,
+              date: widget.date,
               onMealSwapped: (alt) => _handleSwap(originalMeal, alt),
               isDone: _doneMealIds.contains(m.id),
               onToggleDone: () => _toggleDone(m.id),
@@ -548,12 +553,14 @@ class _DailyViewState extends State<_DailyView> {
 
 class _MealCard extends ConsumerStatefulWidget {
   final Meal meal;
+  final String date;
   final ValueChanged<Meal> onMealSwapped;
   final bool isDone;
   final VoidCallback onToggleDone;
 
   const _MealCard({
     required this.meal,
+    required this.date,
     required this.onMealSwapped,
     required this.isDone,
     required this.onToggleDone,
@@ -580,6 +587,7 @@ class _MealCard extends ConsumerStatefulWidget {
 
 class _MealCardState extends ConsumerState<_MealCard> {
   bool _swapping = false;
+  bool _swapped = false;
 
   Future<void> _instantSwap() async {
     setState(() => _swapping = true);
@@ -591,8 +599,9 @@ class _MealCardState extends ConsumerState<_MealCard> {
       if (alternatives.isNotEmpty && mounted) {
         // Record swap globally so all views reflect the change
         ref.read(mealSwapOverridesProvider.notifier)
-            .recordSwap(widget.meal.id, alternatives.first);
+            .recordSwap(widget.date, widget.meal.mealType, alternatives.first);
         widget.onMealSwapped(alternatives.first);
+        if (mounted) setState(() => _swapped = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Swapped to "${alternatives.first.name}"'),
@@ -713,20 +722,22 @@ class _MealCardState extends ConsumerState<_MealCard> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _swapping ? null : _instantSwap,
-                      icon: _swapping
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(LucideIcons.refreshCw, size: 14),
-                      label: const Text('Swap'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 44),
-                        padding: EdgeInsets.zero,
+                  if (!_swapped) ...[
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _swapping ? null : _instantSwap,
+                        icon: _swapping
+                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(LucideIcons.refreshCw, size: 14),
+                        label: const Text('Swap'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 44),
+                          padding: EdgeInsets.zero,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   const SizedBox(width: 8),
                   Expanded(
                     child: isDone

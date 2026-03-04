@@ -54,17 +54,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final uid = ref.read(authUserIdProvider);
-      if (uid != null) {
+      if (uid == null) return;
+
+      // Init pedometer (non-critical)
+      try {
         await PedometerService.instance.init(uid);
-        // Record today's login for streak tracking
+      } catch (_) {}
+
+      // Record today's login for streak tracking (non-critical)
+      try {
         final streakService = ref.read(streakServiceProvider);
-        await streakService.recordTodayLogin();
-        // Refresh streak providers
+        await streakService.recordTodayLogin(uid);
         ref.invalidate(currentStreakProvider);
         ref.invalidate(weeklyProgressProvider);
-        // Show daily goals dialog if not set today
-        if (mounted) await _checkDailyGoals(uid);
-      }
+      } catch (_) {}
+
+      // Always show daily goals dialog if not set today
+      if (mounted) await _checkDailyGoals(uid);
     });
   }
 

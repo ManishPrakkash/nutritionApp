@@ -4,7 +4,6 @@ import 'package:health_nutrition_app/core/icons/lucide_fallback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../streaks/providers/streak_provider.dart';
 import '../../streaks/screens/streaks_screen.dart';
 import '../services/streak_service.dart';
 
@@ -13,8 +12,8 @@ class StreakWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final streakData = ref.watch(streakProvider).valueOrNull;
-    final streak = streakCount(streakData);
+    final currentStreakAsync = ref.watch(currentStreakProvider);
+    final streak = currentStreakAsync.valueOrNull ?? 0;
     final weeklyProgressAsync = ref.watch(weeklyProgressProvider);
     return Container(
       decoration: premiumCardDecoration(),

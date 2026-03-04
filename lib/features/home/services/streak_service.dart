@@ -1,89 +1,73 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../auth/providers/auth_provider.dart';
 
-part 'streak_service.g.dart';
+/// Provides a singleton StreakService instance.
+final streakServiceProvider = Provider<StreakService>((ref) => StreakService());
 
-@riverpod
-StreakService streakService(StreakServiceRef ref) {
-  return StreakService();
-}
+/// Current login streak for the authenticated user.
+/// Returns 0 when no user is signed in.
+final currentStreakProvider = FutureProvider<int>((ref) async {
+  final uid = ref.watch(authUserIdProvider);
+  if (uid == null) return 0;
+  final service = ref.read(streakServiceProvider);
+  await service.recordTodayLogin(uid);
+  return service.getCurrentStreak(uid);
+});
 
-@riverpod
-class CurrentStreak extends _$CurrentStreak {
-  @override
-  Future<int> build() async {
-    final service = ref.read(streakServiceProvider);
-    await service.recordTodayLogin();
-    return service.getCurrentStreak();
-  }
-
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    final service = ref.read(streakServiceProvider);
-    await service.recordTodayLogin();
-    state = AsyncData(await service.getCurrentStreak());
-  }
-}
-
-@riverpod
-class WeeklyProgress extends _$WeeklyProgress {
-  @override
-  Future<List<bool>> build() async {
-    final service = ref.read(streakServiceProvider);
-    return service.getWeeklyProgress();
-  }
-
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    final service = ref.read(streakServiceProvider);
-    state = AsyncData(await service.getWeeklyProgress());
-  }
-}
+/// Weekly login progress (Mon–Sun) for the authenticated user.
+final weeklyProgressProvider = FutureProvider<List<bool>>((ref) async {
+  final uid = ref.watch(authUserIdProvider);
+  if (uid == null) return List.filled(7, false);
+  final service = ref.read(streakServiceProvider);
+  return service.getWeeklyProgress(uid);
+});
 
 class StreakService {
-  static const String _loginDatesKey = 'login_dates';
-  static const String _currentStreakKey = 'current_streak';
-  static const String _lastLoginKey = 'last_login_date';
-  
   Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
 
+  // Per-user key helpers
+  String _loginDatesKey(String uid) => 'login_dates_$uid';
+  String _currentStreakKey(String uid) => 'current_streak_$uid';
+  String _lastLoginKey(String uid) => 'last_login_date_$uid';
+
   /// Records today's login and updates streak
-  Future<void> recordTodayLogin() async {
+  Future<void> recordTodayLogin(String uid) async {
     final prefs = await _prefs;
     final today = _getTodayDateString();
-    final lastLogin = prefs.getString(_lastLoginKey);
+    final lastLogin = prefs.getString(_lastLoginKey(uid));
     
     // If already logged in today, don't update
     if (lastLogin == today) return;
     
     // Get current login dates
-    final loginDates = prefs.getStringList(_loginDatesKey) ?? [];
+    final loginDates = prefs.getStringList(_loginDatesKey(uid)) ?? [];
     
     // Add today if not already present
     if (!loginDates.contains(today)) {
       loginDates.add(today);
-      await prefs.setStringList(_loginDatesKey, loginDates);
+      await prefs.setStringList(_loginDatesKey(uid), loginDates);
     }
     
     // Update last login date
-    await prefs.setString(_lastLoginKey, today);
+    await prefs.setString(_lastLoginKey(uid), today);
     
     // Calculate and update streak
     final streak = _calculateStreak(loginDates);
-    await prefs.setInt(_currentStreakKey, streak);
+    await prefs.setInt(_currentStreakKey(uid), streak);
   }
 
   /// Gets the current login streak
-  Future<int> getCurrentStreak() async {
+  Future<int> getCurrentStreak(String uid) async {
     final prefs = await _prefs;
-    final loginDates = prefs.getStringList(_loginDatesKey) ?? [];
+    final loginDates = prefs.getStringList(_loginDatesKey(uid)) ?? [];
     return _calculateStreak(loginDates);
   }
 
   /// Gets weekly progress for the current calendar week (Mon-Sun).
-  Future<List<bool>> getWeeklyProgress() async {
+  Future<List<bool>> getWeeklyProgress(String uid) async {
     final prefs = await _prefs;
-    final loginDates = prefs.getStringList(_loginDatesKey) ?? [];
+    final loginDates = prefs.getStringList(_loginDatesKey(uid)) ?? [];
     
     final today = DateTime.now();
     // Monday of the current week (1 = Mon ... 7 = Sun)
@@ -140,19 +124,19 @@ class StreakService {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  /// Resets all streak data (for testing or user request)
-  Future<void> resetStreak() async {
+  /// Resets all streak data for a user
+  Future<void> resetStreak(String uid) async {
     final prefs = await _prefs;
-    await prefs.remove(_loginDatesKey);
-    await prefs.remove(_currentStreakKey);
-    await prefs.remove(_lastLoginKey);
+    await prefs.remove(_loginDatesKey(uid));
+    await prefs.remove(_currentStreakKey(uid));
+    await prefs.remove(_lastLoginKey(uid));
   }
 
   /// Gets streak statistics
-  Future<Map<String, dynamic>> getStreakStats() async {
+  Future<Map<String, dynamic>> getStreakStats(String uid) async {
     final prefs = await _prefs;
-    final loginDates = prefs.getStringList(_loginDatesKey) ?? [];
-    final currentStreak = await getCurrentStreak();
+    final loginDates = prefs.getStringList(_loginDatesKey(uid)) ?? [];
+    final currentStreak = await getCurrentStreak(uid);
     
     // Calculate longest streak
     int longestStreak = _calculateLongestStreak(loginDates);
@@ -161,7 +145,7 @@ class StreakService {
       'currentStreak': currentStreak,
       'longestStreak': longestStreak,
       'totalLoginDays': loginDates.length,
-      'lastLoginDate': prefs.getString(_lastLoginKey),
+      'lastLoginDate': prefs.getString(_lastLoginKey(uid)),
     };
   }
 
