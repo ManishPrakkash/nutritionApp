@@ -1,0 +1,65 @@
+// Fallback when lucide_icons_flutter package is unavailable (e.g. pub cache path issues).
+// Maps Lucide icon names to Flutter Material Icons.
+import 'package:flutter/material.dart';
+
+class LucideIcons {
+  LucideIcons._();
+  static const IconData activity = Icons.directions_run;
+  static const IconData alertTriangle = Icons.warning_amber;
+  static const IconData arrowLeft = Icons.arrow_back;
+  static const IconData arrowRight = Icons.arrow_forward;
+  static const IconData award = Icons.emoji_events;
+  static const IconData barChart3 = Icons.bar_chart;
+  static const IconData bell = Icons.notifications;
+  static const IconData brainCircuit = Icons.psychology;
+  static const IconData check = Icons.check;
+  static const IconData checkCircle2 = Icons.check_circle;
+  static const IconData chefHat = Icons.restaurant_menu;
+  static const IconData chevronDown = Icons.expand_more;
+  static const IconData chevronRight = Icons.chevron_right;
+  static const IconData circle = Icons.circle_outlined;
+  static const IconData circleCheck = Icons.check_circle;
+  static const IconData circleDot = Icons.radio_button_unchecked;
+  static const IconData coffee = Icons.coffee;
+  static const IconData cpu = Icons.memory;
+  static const IconData download = Icons.download;
+  static const IconData droplets = Icons.water_drop;
+  static const IconData dumbbell = Icons.fitness_center;
+  static const IconData eye = Icons.visibility;
+  static const IconData eyeOff = Icons.visibility_off;
+  static const IconData flame = Icons.local_fire_department;
+  static const IconData footprints = Icons.directions_walk;
+  static const IconData heart = Icons.favorite;
+  static const IconData home = Icons.home;
+  static const IconData info = Icons.info_outline;
+  static const IconData leaf = Icons.eco;
+  static const IconData logOut = Icons.logout;
+  static const IconData medal = Icons.military_tech;
+  static const IconData moon = Icons.nightlight_round;
+  static const IconData package = Icons.inventory_2;
+  static const IconData plus = Icons.add;
+  static const IconData refreshCw = Icons.refresh;
+  static const IconData refreshCcw = Icons.refresh;
+  static const IconData search = Icons.search;
+  static const IconData settings = Icons.settings;
+  static const IconData shieldAlert = Icons.shield;
+  static const IconData shoppingCart = Icons.shopping_cart;
+  static const IconData smartphone = Icons.smartphone;
+  static const IconData sparkles = Icons.auto_awesome;
+  static const IconData timer = Icons.timer;
+  static const IconData trophy = Icons.emoji_events;
+  static const IconData user = Icons.person;
+  static const IconData userCheck = Icons.person_add_alt_1;
+  static const IconData utensils = Icons.restaurant;
+  static const IconData utensilsCrossed = Icons.restaurant;
+  static const IconData watch = Icons.watch;
+  static const IconData x = Icons.close;
+  static const IconData zap = Icons.bolt;
+  static const IconData ruler = Icons.straighten;
+  static const IconData running = Icons.directions_run;
+  static const IconData calendar = Icons.calendar_today;
+  static const IconData calculator = Icons.calculate;
+  static const IconData apple = Icons.restaurant;
+  static const IconData scale = Icons.scale;
+  static const IconData bellOff = Icons.notifications_off;
+}
