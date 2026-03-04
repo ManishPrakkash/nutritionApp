@@ -1,0 +1,286 @@
+{
+  "prediction_templates": [
+    {
+      "bmi_category": "Normal",
+      "badge_status": "Bronze",
+      "calorie_target": 1800,
+      "predictions": [
+        {
+          "condition": "obesity",
+          "level": "low",
+          "score": 15.2,
+          "description": "Low risk based on current BMI and activity level"
+        },
+        {
+          "condition": "diabetes",
+          "level": "low",
+          "score": 8.7,
+          "description": "Excellent glucose control indicators"
+        },
+        {
+          "condition": "hypertension",
+          "level": "moderate",
+          "score": 35.4,
+          "description": "Monitor blood pressure regularly"
+        },
+        {
+          "condition": "cardiovascular",
+          "level": "low",
+          "score": 12.8,
+          "description": "Good cardiovascular health markers"
+        }
+      ],
+      "user_stats": {
+        "bmi": 22.5,
+        "body_fat_percentage": 15.2,
+        "muscle_mass": 68.4,
+        "metabolic_rate": 1650,
+        "fitness_score": 78
+      }
+    },
+    {
+      "bmi_category": "Overweight",
+      "badge_status": "Silver",
+      "calorie_target": 2100,
+      "predictions": [
+        {
+          "condition": "obesity",
+          "level": "moderate",
+          "score": 45.8,
+          "description": "Consider lifestyle modifications"
+        },
+        {
+          "condition": "diabetes",
+          "level": "moderate",
+          "score": 28.3,
+          "description": "Monitor carbohydrate intake"
+        },
+        {
+          "condition": "hypertension",
+          "level": "moderate",
+          "score": 42.1,
+          "description": "Regular monitoring recommended"
+        },
+        {
+          "condition": "cardiovascular",
+          "level": "moderate",
+          "score": 38.7,
+          "description": "Increase cardio exercise frequency"
+        }
+      ],
+      "user_stats": {
+        "bmi": 26.8,
+        "body_fat_percentage": 22.1,
+        "muscle_mass": 71.2,
+        "metabolic_rate": 1780,
+        "fitness_score": 65
+      }
+    },
+    {
+      "bmi_category": "Underweight",
+      "badge_status": "Beginner",
+      "calorie_target": 2300,
+      "predictions": [
+        {
+          "condition": "malnutrition",
+          "level": "moderate",
+          "score": 38.5,
+          "description": "Focus on nutrient-dense foods"
+        },
+        {
+          "condition": "bone_density",
+          "level": "moderate",
+          "score": 42.3,
+          "description": "Ensure adequate calcium and vitamin D"
+        },
+        {
+          "condition": "immune_function",
+          "level": "moderate",
+          "score": 35.7,
+          "description": "Support immune system with proper nutrition"
+        },
+        {
+          "condition": "muscle_loss",
+          "level": "high",
+          "score": 58.9,
+          "description": "Increase protein intake and resistance training"
+        }
+      ],
+      "user_stats": {
+        "bmi": 17.2,
+        "body_fat_percentage": 8.4,
+        "muscle_mass": 52.1,
+        "metabolic_rate": 1420,
+        "fitness_score": 45
+      }
+    },
+    {
+      "bmi_category": "Obese",
+      "badge_status": "Bronze",
+      "calorie_target": 1650,
+      "predictions": [
+        {
+          "condition": "obesity",
+          "level": "high",
+          "score": 78.4,
+          "description": "Systematic weight management approach needed"
+        },
+        {
+          "condition": "diabetes",
+          "level": "high",
+          "score": 62.7,
+          "description": "High risk - regular glucose monitoring essential"
+        },
+        {
+          "condition": "hypertension",
+          "level": "high",
+          "score": 71.2,
+          "description": "Blood pressure management critical"
+        },
+        {
+          "condition": "cardiovascular",
+          "level": "high",
+          "score": 69.8,
+          "description": "Comprehensive cardiovascular risk assessment needed"
+        },
+        {
+          "condition": "sleep_apnea",
+          "level": "moderate",
+          "score": 48.6,
+          "description": "Consider sleep study evaluation"
+        }
+      ],
+      "user_stats": {
+        "bmi": 32.4,
+        "body_fat_percentage": 35.8,
+        "muscle_mass": 76.3,
+        "metabolic_rate": 1890,
+        "fitness_score": 42
+      }
+    },
+    {
+      "bmi_category": "Normal",
+      "badge_status": "Gold",
+      "calorie_target": 2000,
+      "predictions": [
+        {
+          "condition": "obesity",
+          "level": "low",
+          "score": 5.2,
+          "description": "Excellent weight management"
+        },
+        {
+          "condition": "diabetes",
+          "level": "low",
+          "score": 3.8,
+          "description": "Optimal metabolic health"
+        },
+        {
+          "condition": "hypertension",
+          "level": "low",
+          "score": 12.4,
+          "description": "Healthy blood pressure patterns"
+        },
+        {
+          "condition": "cardiovascular",
+          "level": "low",
+          "score": 8.1,
+          "description": "Excellent cardiovascular fitness"
+        }
+      ],
+      "user_stats": {
+        "bmi": 21.8,
+        "body_fat_percentage": 12.5,
+        "muscle_mass": 72.6,
+        "metabolic_rate": 1720,
+        "fitness_score": 92
+      }
+    },
+    {
+      "bmi_category": "Normal",
+      "badge_status": "Platinum",
+      "calorie_target": 2200,
+      "predictions": [
+        {
+          "condition": "obesity",
+          "level": "low",
+          "score": 2.1,
+          "description": "Elite body composition"
+        },
+        {
+          "condition": "diabetes",
+          "level": "low",
+          "score": 1.5,
+          "description": "Superior insulin sensitivity"
+        },
+        {
+          "condition": "hypertension",
+          "level": "low",
+          "score": 6.8,
+          "description": "Optimal cardiovascular function"
+        },
+        {
+          "condition": "cardiovascular",
+          "level": "low",
+          "score": 4.2,
+          "description": "Elite athletic cardiovascular profile"
+        }
+      ],
+      "user_stats": {
+        "bmi": 23.1,
+        "body_fat_percentage": 10.2,
+        "muscle_mass": 78.9,
+        "metabolic_rate": 1850,
+        "fitness_score": 98
+      }
+    }
+  ],
+  "age_adjustments": {
+    "18-25": { "score_modifier": -5, "calorie_bonus": 200 },
+    "26-35": { "score_modifier": 0, "calorie_bonus": 100 },
+    "36-45": { "score_modifier": 5, "calorie_bonus": 0 },
+    "46-55": { "score_modifier": 10, "calorie_bonus": -100 },
+    "56-65": { "score_modifier": 15, "calorie_bonus": -200 },
+    "65+": { "score_modifier": 20, "calorie_bonus": -300 }
+  },
+  "activity_modifiers": {
+    "sedentary": { "score_modifier": 15, "calorie_modifier": -200 },
+    "light": { "score_modifier": 10, "calorie_modifier": -100 },
+    "moderate": { "score_modifier": 0, "calorie_modifier": 0 },
+    "active": { "score_modifier": -5, "calorie_modifier": 150 },
+    "extreme": { "score_modifier": -10, "calorie_modifier": 300 }
+  },
+  "service_status": {
+    "status": "offline",
+    "version": "2.1.0-dummy",
+    "models": [
+      {
+        "name": "BMI Classification",
+        "type": "Random Forest",
+        "accuracy": 94.2,
+        "last_trained": "2026-02-15"
+      },
+      {
+        "name": "Diabetes Risk",
+        "type": "Gradient Boosting",
+        "accuracy": 89.7,
+        "last_trained": "2026-02-18"
+      },
+      {
+        "name": "Cardiovascular Risk",
+        "type": "Neural Network",
+        "accuracy": 91.5, 
+        "last_trained": "2026-02-20"
+      },
+      {
+        "name": "Calorie Prediction",
+        "type": "Ridge Regression",
+        "r2_score": 0.87,
+        "last_trained": "2026-02-22"
+      }
+    ],
+    "features_count": 47,
+    "training_samples": 125000,
+    "message": "ML service is currently in dummy mode"
+  }
+}

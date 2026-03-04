@@ -1,0 +1,64 @@
+{
+  "habits": [
+    {
+      "id": "log_meal",
+      "name": "Log a Meal",
+      "description": "Record at least one meal in your daily journal."
+    },
+    {
+      "id": "complete_workout",
+      "name": "Complete a Workout",
+      "description": "Finish a workout session from your plan."
+    },
+    {
+      "id": "drink_water",
+      "name": "Hydrate Properly",
+      "description": "Drink at least 8 glasses of water."
+    },
+    {
+      "id": "sleep_well",
+      "name": "Get Enough Sleep",
+      "description": "Sleep for at least 7 hours."
+    }
+  ],
+  "badges": [
+    {
+      "id": "streak_7",
+      "name": "7-Day Streak",
+      "description": "Maintain a consistent streak for 7 days.",
+      "criteria_type": "streak",
+      "criteria_value": 7
+    },
+    {
+      "id": "streak_30",
+      "name": "30-Day Streak",
+      "description": "Maintain a consistent streak for 30 days.",
+      "criteria_type": "streak",
+      "criteria_value": 30
+    },
+    {
+      "id": "perfect_week_meals",
+      "name": "Perfect Week: Meals",
+      "description": "Log a meal every day for 7 consecutive days.",
+      "criteria_type": "habit_streak",
+      "criteria_value": 7,
+      "habit_id": "log_meal"
+    },
+    {
+      "id": "perfect_month_workouts",
+      "name": "Perfect Month: Workouts",
+      "description": "Complete a workout every day for 30 consecutive days.",
+      "criteria_type": "habit_streak",
+      "criteria_value": 30,
+      "habit_id": "complete_workout"
+    },
+    {
+      "id": "hydration_master",
+      "name": "Hydration Master",
+      "description": "Log your water intake for 14 consecutive days.",
+      "criteria_type": "habit_streak",
+      "criteria_value": 14,
+      "habit_id": "drink_water"
+    }
+  ]
+}

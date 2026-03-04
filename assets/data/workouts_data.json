@@ -1,0 +1,105 @@
+[
+  {
+    "id": "home_beginner_01",
+    "title": "Home Foundation",
+    "level": "Beginner",
+    "location": "Home",
+    "durationMinutes": 30,
+    "description": "A balanced full-body workout to build a solid foundation.",
+    "warmUpDescription": "5-Minute Dynamic Warm-up",
+    "warmUp": [
+      { "name": "Jumping Jacks", "reps": "30 sec", "sets": 1 },
+      { "name": "High Knees", "reps": "30 sec", "sets": 1 },
+      { "name": "Arm Circles", "reps": "30 sec", "sets": 1 },
+      { "name": "Leg Swings", "reps": "30 sec", "sets": 1 }
+    ],
+    "mainExercises": [
+      { "name": "Bodyweight Squats", "reps": "15", "sets": 3 },
+      { "name": "Push-ups (on knees if needed)", "reps": "10", "sets": 3 },
+      { "name": "Plank", "reps": "30 sec", "sets": 3 },
+      { "name": "Glute Bridges", "reps": "15", "sets": 3 },
+      { "name": "Lunges", "reps": "10 per leg", "sets": 3 }
+    ],
+    "coolDownDescription": "5-Minute Static Cool-down",
+    "coolDown": [
+        { "name": "Quad Stretch", "reps": "30 sec per leg", "sets": 1 },
+        { "name": "Hamstring Stretch", "reps": "30 sec per leg", "sets": 1 },
+        { "name": "Chest Stretch", "reps": "30 sec", "sets": 1 }
+    ]
+  },
+  {
+    "id": "home_intermediate_01",
+    "title": "Home Strength",
+    "level": "Intermediate",
+    "location": "Home",
+    "durationMinutes": 45,
+    "description": "Increase intensity and challenge your muscles further.",
+    "warmUpDescription": "5-Minute Dynamic Warm-up",
+    "warmUp": [
+      { "name": "Burpees", "reps": "30 sec", "sets": 1 },
+      { "name": "Mountain Climbers", "reps": "30 sec", "sets": 1 },
+      { "name": "Torso Twists", "reps": "30 sec", "sets": 1 }
+    ],
+    "mainExercises": [
+      { "name": "Pistol Squats (assisted)", "reps": "8 per leg", "sets": 3 },
+      { "name": "Diamond Push-ups", "reps": "12", "sets": 3 },
+      { "name": "Side Plank", "reps": "30 sec per side", "sets": 3 },
+      { "name": "Single-leg Deadlifts (bodyweight)", "reps": "12 per leg", "sets": 3 },
+      { "name": "Pull-ups (if you have a bar)", "reps": "As many as possible", "sets": 3 }
+    ],
+    "coolDownDescription": "5-Minute Static Cool-down",
+    "coolDown": [
+        { "name": "Pigeon Pose", "reps": "30 sec per side", "sets": 1 },
+        { "name": "Triceps Stretch", "reps": "30 sec per arm", "sets": 1 }
+    ]
+  },
+  {
+    "id": "gym_beginner_01",
+    "title": "Gym Introduction",
+    "level": "Beginner",
+    "location": "Gym",
+    "durationMinutes": 45,
+    "description": "Get comfortable with fundamental gym equipment.",
+    "warmUpDescription": "5-Minute Treadmill or Bike",
+    "warmUp": [
+      { "name": "Light Cardio", "reps": "5 min", "sets": 1 }
+    ],
+    "mainExercises": [
+      { "name": "Leg Press", "reps": "12", "sets": 3 },
+      { "name": "Lat Pulldown", "reps": "12", "sets": 3 },
+      { "name": "Dumbbell Bench Press", "reps": "12", "sets": 3 },
+      { "name": "Dumbbell Bicep Curls", "reps": "12 per arm", "sets": 3 },
+      { "name": "Tricep Pushdowns", "reps": "12", "sets": 3 }
+    ],
+    "coolDownDescription": "5-Minute Stretching",
+    "coolDown": [
+        { "name": "Hamstring Stretch", "reps": "30 sec per leg", "sets": 1 },
+        { "name": "Chest Opener", "reps": "30 sec", "sets": 1 }
+    ]
+  },
+  {
+    "id": "gym_advanced_01",
+    "title": "Gym Power",
+    "level": "Advanced",
+    "location": "Gym",
+    "durationMinutes": 60,
+    "description": "A high-intensity workout for experienced gym-goers.",
+    "warmUpDescription": "10-Minute Dynamic Warm-up",
+    "warmUp": [
+      { "name": "Rowing Machine", "reps": "5 min", "sets": 1 },
+      { "name": "Dynamic Stretches", "reps": "5 min", "sets": 1 }
+    ],
+    "mainExercises": [
+      { "name": "Barbell Squats", "reps": "8", "sets": 4 },
+      { "name": "Deadlifts", "reps": "5", "sets": 4 },
+      { "name": "Overhead Press", "reps": "8", "sets": 4 },
+      { "name": "Weighted Pull-ups", "reps": "8", "sets": 4 },
+      { "name": "Cable Crunches", "reps": "15", "sets": 3 }
+    ],
+    "coolDownDescription": "10-Minute Foam Rolling and Stretching",
+    "coolDown": [
+        { "name": "Foam Roll Glutes", "reps": "2 min per side", "sets": 1 },
+        { "name": "Foam Roll Lats", "reps": "2 min per side", "sets": 1 }
+    ]
+  }
+]

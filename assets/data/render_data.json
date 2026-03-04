@@ -1,0 +1,98 @@
+{
+  "rendered_images": {
+    "meal_001": {
+      "full_image": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop",
+      "thumbnail": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=150&h=150&fit=crop",
+      "recipe_steps": [
+        "https://images.unsplash.com/photo-1551006917-3b4c078c47c9?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=300&h=200&fit=crop"
+      ]
+    },
+    "meal_002": {
+      "full_image": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop",
+      "thumbnail": "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=150&h=150&fit=crop",
+      "recipe_steps": [
+        "https://images.unsplash.com/photo-1506084868230-bb9d95c24759?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=300&h=200&fit=crop"
+      ]
+    },
+    "meal_003": {
+      "full_image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop",
+      "thumbnail": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=150&h=150&fit=crop", 
+      "recipe_steps": [
+        "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=300&h=200&fit=crop"
+      ]
+    },
+    "meal_004": {
+      "full_image": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&h=300&fit=crop",
+      "thumbnail": "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=150&h=150&fit=crop",
+      "recipe_steps": [
+        "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=300&h=200&fit=crop"
+      ]
+    },
+    "meal_005": {
+      "full_image": "https://images.unsplash.com/photo-1511909025559-b44c5b6b6826?w=400&h=300&fit=crop",
+      "thumbnail": "https://images.unsplash.com/photo-1511909025559-b44c5b6b6826?w=150&h=150&fit=crop",
+      "recipe_steps": [
+        "https://images.unsplash.com/photo-1505252585461-04db1eb84625?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1511909025559-b44c5b6b6826?w=300&h=200&fit=crop",
+        "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=300&h=200&fit=crop"
+      ]
+    }
+  },
+  "nutrition_charts": {
+    "pie": [
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI4MCIgZmlsbD0iIzQyQTVGNSIvPjwvc3ZnPg==",
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI4MCIgZmlsbD0iI0ZGNkI2QiIvPjwvc3ZnPg==",
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI4MCIgZmlsbD0iIzRFQ0RDNCIvPjwvc3ZnPg=="
+    ],
+    "bar": [
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3QgeD0iNTAiIHk9IjUwIiB3aWR0aD0iNDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjNDJBNUY1Ii8+PC9zdmc+",
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3QgeD0iNTAiIHk9IjUwIiB3aWR0aD0iNDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRkY2QjZCIi8+PC9zdmc+"
+    ],
+    "donut": [
+      "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI4MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNDJBNUY1IiBzdHJva2Utd2lkdGg9IjMwIi8+PC9zdmc+"
+    ]
+  },
+  "visualizations": {
+    "weekly_plan": [
+      "https://images.unsplash.com/photo-1498579397066-22750a3cb424?w=800&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=800&h=600&fit=crop"
+    ],
+    "monthly_plan": [
+      "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1481833761820-0509d3217039?w=800&h=600&fit=crop"
+    ],
+    "meal_collage": [
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=600&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1547592180-85f173990554?w=600&h=600&fit=crop"
+    ]
+  },
+  "default_images": {
+    "breakfast": [
+      "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=300&fit=crop"
+    ],
+    "lunch": [
+      "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop"
+    ],
+    "dinner": [
+      "https://images.unsplash.com/photo-1498579397066-22750a3cb424?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?w=400&h=300&fit=crop"
+    ],
+    "snack": [
+      "https://images.unsplash.com/photo-1505252585461-04db1eb84625?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1576618148400-f54bed99fcfd?w=400&h=300&fit=crop"
+    ]
+  }
+}
