@@ -112,9 +112,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   bool get _canProceed {
-    if (_step == 0) return true;
+    if (_step == 0) return _dietTypes.isNotEmpty;
     if (_step == 1) return _healthGoal.isNotEmpty;
-    if (_step == 2) return true;
+    if (_step == 2) return _preferredCuisine.isNotEmpty;
     return true;
   }
 
@@ -269,8 +269,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               selected: selected,
               onSelected: (v) {
                 setState(() {
-                  if (v) _dietTypes.add(d);
-                  else _dietTypes.remove(d);
+                  _dietTypes
+                    ..clear()
+                    ..addAll(v ? [d] : []);
                 });
               },
               backgroundColor: AppColors.surface,
@@ -482,8 +483,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               selected: selected,
               onSelected: (v) {
                 setState(() {
-                  if (v) _preferredCuisine.add(c);
-                  else _preferredCuisine.remove(c);
+                  _preferredCuisine
+                    ..clear()
+                    ..addAll(v ? [c] : []);
                 });
               },
               backgroundColor: AppColors.surface,

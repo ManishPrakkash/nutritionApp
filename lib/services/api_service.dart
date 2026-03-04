@@ -104,6 +104,8 @@ class ApiService {
         'steps': ['Boil milk', 'Add oats', 'Cook for 5 minutes', 'Add honey'],
         'cuisine': 'continental',
         'healthScore': 80,
+        'allergensPresent': ['dairy'],
+        'healthGoalFit': ['weight_loss', 'general_health'],
       },
       {
         'id': 'fallback_b2',
@@ -120,6 +122,8 @@ class ApiService {
         'steps': ['Add yogurt to bowl', 'Top with fruit', 'Finish with nuts'],
         'cuisine': 'continental',
         'healthScore': 82,
+        'allergensPresent': ['dairy', 'nuts'],
+        'healthGoalFit': ['weight_loss', 'general_health'],
       },
       {
         'id': 'fallback_l1',
@@ -136,6 +140,8 @@ class ApiService {
         'steps': ['Cook dal', 'Prepare tadka', 'Steam rice', 'Serve together'],
         'cuisine': 'indian',
         'healthScore': 84,
+        'allergensPresent': [],
+        'healthGoalFit': ['general_health', 'maintain_weight'],
       },
       {
         'id': 'fallback_l2',
@@ -152,6 +158,8 @@ class ApiService {
         'steps': ['Grill paneer', 'Chop vegetables', 'Toss with dressing'],
         'cuisine': 'indian',
         'healthScore': 81,
+        'allergensPresent': ['dairy'],
+        'healthGoalFit': ['muscle_gain', 'general_health'],
       },
       {
         'id': 'fallback_d1',
@@ -168,6 +176,8 @@ class ApiService {
         'steps': ['Marinate chicken', 'Grill chicken', 'Sauté vegetables', 'Serve together'],
         'cuisine': 'continental',
         'healthScore': 85,
+        'allergensPresent': [],
+        'healthGoalFit': ['muscle_gain', 'weight_loss'],
       },
       {
         'id': 'fallback_d2',
@@ -184,6 +194,8 @@ class ApiService {
         'steps': ['Chop vegetables and tofu', 'Stir fry with garlic', 'Add sauce and serve'],
         'cuisine': 'asian',
         'healthScore': 83,
+        'allergensPresent': ['gluten'],
+        'healthGoalFit': ['weight_loss', 'general_health'],
       },
       {
         'id': 'fallback_d3',
@@ -200,6 +212,62 @@ class ApiService {
         'steps': ['Sauté vegetables', 'Add lentils and broth', 'Simmer until tender', 'Serve with bread'],
         'cuisine': 'continental',
         'healthScore': 86,
+        'allergensPresent': ['gluten'],
+        'healthGoalFit': ['general_health', 'improve_stamina'],
+      },
+      {
+        'id': 'fallback_n1',
+        'name': 'Warm Turmeric Milk',
+        'mealType': 'night',
+        'calories': 120,
+        'protein': 4,
+        'carbs': 14,
+        'fat': 5,
+        'fiber': 0,
+        'prepMinutes': 5,
+        'dietaryType': 'vegetarian',
+        'ingredients': ['Milk - 1 cup', 'Turmeric - 1/2 tsp', 'Honey - 1 tsp'],
+        'steps': ['Warm the milk', 'Add turmeric and honey', 'Serve warm'],
+        'cuisine': 'indian',
+        'healthScore': 78,
+        'allergensPresent': ['dairy'],
+        'healthGoalFit': ['reduce_stress', 'general_health'],
+      },
+      {
+        'id': 'fallback_n2',
+        'name': 'Mixed Nuts & Seeds',
+        'mealType': 'night',
+        'calories': 160,
+        'protein': 6,
+        'carbs': 8,
+        'fat': 12,
+        'fiber': 2,
+        'prepMinutes': 2,
+        'dietaryType': 'vegan',
+        'ingredients': ['Almonds - 5', 'Walnuts - 3', 'Pumpkin seeds - 1 tbsp'],
+        'steps': ['Combine nuts and seeds in a bowl', 'Enjoy as a light snack'],
+        'cuisine': 'continental',
+        'healthScore': 80,
+        'allergensPresent': ['nuts'],
+        'healthGoalFit': ['general_health', 'muscle_gain'],
+      },
+      {
+        'id': 'fallback_n3',
+        'name': 'Banana with Peanut Butter',
+        'mealType': 'night',
+        'calories': 180,
+        'protein': 5,
+        'carbs': 28,
+        'fat': 8,
+        'fiber': 3,
+        'prepMinutes': 2,
+        'dietaryType': 'vegan',
+        'ingredients': ['Banana - 1 small', 'Peanut butter - 1 tbsp'],
+        'steps': ['Slice banana', 'Spread peanut butter on slices', 'Enjoy'],
+        'cuisine': 'continental',
+        'healthScore': 76,
+        'allergensPresent': ['nuts'],
+        'healthGoalFit': ['improve_stamina', 'general_health'],
       },
     ];
   }
@@ -549,20 +617,28 @@ class ApiService {
     await _loadMealsData();
     
     try {
-      // Use local data with dietary filtering
+      // Use comprehensive filtering: diet + allergies + cuisine + goal
       final dietTypes = prefs?.dietTypes ?? ['vegetarian'];
-      final filteredMeals = _filterMealsByDietaryType(dietTypes);
+      final filteredMeals = _filterMeals(
+        dietTypes: dietTypes,
+        allergies: prefs?.allergies ?? [],
+        cuisines: prefs?.preferredCuisine ?? [],
+        healthGoal: prefs?.healthGoal ?? '',
+      );
       
       final List<Meal> dayMeals = [];
       
-      // Get breakfast
+      // Get breakfast (MORNING)
       dayMeals.addAll(_getVariedMeals(filteredMeals, userId, date, 'breakfast', count: 1));
       
-      // Get lunch
+      // Get lunch (MIDDAY)
       dayMeals.addAll(_getVariedMeals(filteredMeals, userId, date, 'lunch', count: 1));
       
-      // Get dinner
+      // Get dinner (EVENING)
       dayMeals.addAll(_getVariedMeals(filteredMeals, userId, date, 'dinner', count: 1));
+      
+      // Get night meal (NIGHT) — light snack under 200 kcal
+      dayMeals.addAll(_getVariedMeals(filteredMeals, userId, date, 'night', count: 1));
       
       if (dayMeals.isNotEmpty) return dayMeals;
       final fromJson = _defaultMealsForDayFromJson(date: date, userId: userId);
@@ -587,32 +663,20 @@ class ApiService {
     final dayIndex = parsedDate.difference(baseDate).inDays;
     final userOffset = userId != null ? userId.hashCode.abs() : 0;
 
-    final types = ['breakfast', 'lunch', 'dinner'];
+    final types = ['breakfast', 'lunch', 'dinner', 'night'];
     final List<Meal> result = [];
     for (final mealType in types) {
       final byType = _allMeals!
           .where((m) =>
               (m['mealType'] as String? ?? '').toLowerCase() == mealType)
           .toList();
-      if (byType.isEmpty) return [];
+      if (byType.isEmpty) continue;
       
-      // Use unique offset per type to ensure breakfast/lunch/dinner variety
+      // Use unique offset per type to ensure breakfast/lunch/dinner/night variety
       final typeOffset = mealType.hashCode.abs() % 100;
       final idx = (dayIndex + userOffset + typeOffset) % byType.length;
       final match = byType[idx] as Map<String, dynamic>;
-      result.add(Meal(
-        id: _str(match['id']),
-        name: _str(match['name']).isEmpty ? 'Unknown Meal' : _str(match['name']),
-        mealType: _str(match['mealType']).isEmpty ? mealType : _str(match['mealType']),
-        calories: (match['calories'] as num?)?.toInt() ?? 300,
-        protein: (match['protein'] as num?)?.toDouble() ?? 10.0,
-        carbs: (match['carbs'] as num?)?.toDouble() ?? 40.0,
-        fat: (match['fat'] as num?)?.toDouble() ?? 8.0,
-        fiber: (match['fiber'] as num?)?.toDouble() ?? 5.0,
-        prepMinutes: (match['prepMinutes'] as num?)?.toInt() ?? 20,
-        ingredients: _stringList(match['ingredients']),
-        steps: _stringList(match['steps']),
-      ));
+      result.add(_mealFromMap(match, fallbackType: mealType));
     }
     return result;
   }
@@ -630,29 +694,20 @@ class ApiService {
     final dayIndex = parsedDate.difference(baseDate).inDays;
     final userOffset = userId != null ? userId.hashCode.abs() : 0;
 
-    final types = ['breakfast', 'lunch', 'dinner'];
+    final types = ['breakfast', 'lunch', 'dinner', 'night'];
     final List<Meal> result = [];
     for (final mealType in types) {
       final byType = hardcoded
           .where((m) =>
               (m['mealType'] as String? ?? '').toLowerCase() == mealType)
           .toList();
-      if (byType.isEmpty) return _defaultMealsForDay();
+      if (byType.isEmpty) {
+        if (mealType == 'night') continue; // night may not exist in old fallback
+        return _defaultMealsForDay();
+      }
       final idx = (dayIndex + userOffset) % byType.length;
       final m = byType[idx] as Map<String, dynamic>;
-      result.add(Meal(
-        id: _str(m['id']),
-        name: _str(m['name']).isEmpty ? 'Unknown Meal' : _str(m['name']),
-        mealType: _str(m['mealType']).isEmpty ? mealType : _str(m['mealType']),
-        calories: (m['calories'] as num?)?.toInt() ?? 300,
-        protein: (m['protein'] as num?)?.toDouble() ?? 10.0,
-        carbs: (m['carbs'] as num?)?.toDouble() ?? 40.0,
-        fat: (m['fat'] as num?)?.toDouble() ?? 8.0,
-        fiber: (m['fiber'] as num?)?.toDouble() ?? 5.0,
-        prepMinutes: (m['prepMinutes'] as num?)?.toInt() ?? 20,
-        ingredients: _stringList(m['ingredients']),
-        steps: _stringList(m['steps']),
-      ));
+      result.add(_mealFromMap(m, fallbackType: mealType));
     }
     return result;
   }
@@ -669,6 +724,11 @@ class ApiService {
         fat: 6,
         fiber: 4,
         prepMinutes: 15,
+        dietaryType: 'vegetarian',
+        cuisine: 'continental',
+        healthScore: 80,
+        allergensPresent: ['dairy'],
+        healthGoalFit: ['general_health', 'maintain_weight'],
         ingredients: [
           'Rolled oats - 1 cup',
           'Banana - 1 medium',
@@ -693,6 +753,11 @@ class ApiService {
         fat: 12,
         fiber: 8,
         prepMinutes: 35,
+        dietaryType: 'vegetarian',
+        cuisine: 'indian',
+        healthScore: 84,
+        allergensPresent: [],
+        healthGoalFit: ['general_health', 'maintain_weight', 'improve_stamina'],
         ingredients: [
           'Toor dal - 1/2 cup',
           'Brown rice - 1 cup cooked',
@@ -717,6 +782,11 @@ class ApiService {
         fat: 18,
         fiber: 5,
         prepMinutes: 40,
+        dietaryType: 'non-vegetarian',
+        cuisine: 'continental',
+        healthScore: 85,
+        allergensPresent: [],
+        healthGoalFit: ['muscle_gain', 'weight_loss', 'improve_stamina'],
         ingredients: [
           'Chicken breast - 150 g',
           'Mixed vegetables - 1 cup',
@@ -730,7 +800,57 @@ class ApiService {
           'Serve grilled chicken with vegetables on the side.',
         ],
       ),
+      const Meal(
+        id: '4',
+        name: 'Warm Turmeric Milk',
+        mealType: 'night',
+        calories: 120,
+        protein: 4,
+        carbs: 14,
+        fat: 5,
+        fiber: 0,
+        prepMinutes: 5,
+        dietaryType: 'vegetarian',
+        cuisine: 'indian',
+        healthScore: 88,
+        allergensPresent: ['dairy'],
+        healthGoalFit: ['reduce_stress', 'general_health'],
+        ingredients: [
+          'Milk - 1 cup',
+          'Turmeric powder - 1/2 tsp',
+          'Honey - 1 tsp',
+          'Black pepper - pinch',
+        ],
+        steps: [
+          'Warm milk in a saucepan.',
+          'Add turmeric and black pepper.',
+          'Stir well and pour into a cup.',
+          'Add honey and serve warm.',
+        ],
+      ),
     ];
+  }
+
+  /// Construct a Meal from a raw JSON map, filling in all new fields.
+  Meal _mealFromMap(Map<String, dynamic> m, {String fallbackType = 'snack'}) {
+    return Meal(
+      id: _str(m['id']),
+      name: _str(m['name']).isEmpty ? 'Unknown Meal' : _str(m['name']),
+      mealType: _str(m['mealType']).isEmpty ? fallbackType : _str(m['mealType']),
+      calories: (m['calories'] as num?)?.toInt() ?? 300,
+      protein: (m['protein'] as num?)?.toDouble() ?? 10.0,
+      carbs: (m['carbs'] as num?)?.toDouble() ?? 40.0,
+      fat: (m['fat'] as num?)?.toDouble() ?? 8.0,
+      fiber: (m['fiber'] as num?)?.toDouble() ?? 5.0,
+      prepMinutes: (m['prepMinutes'] as num?)?.toInt() ?? 20,
+      ingredients: _stringList(m['ingredients']),
+      steps: _stringList(m['steps']),
+      dietaryType: _str(m['dietaryType']),
+      cuisine: _str(m['cuisine']),
+      healthScore: (m['healthScore'] as num?)?.toInt() ?? 0,
+      allergensPresent: _stringList(m['allergensPresent']),
+      healthGoalFit: _stringList(m['healthGoalFit']),
+    );
   }
 
   /// Default meals for a specific type; when date/userId provided, rotate by day for variety.
@@ -750,46 +870,89 @@ class ApiService {
     return result;
   }
 
-  /// Filter meals based on dietary preferences
-  List<Map<String, dynamic>> _filterMealsByDietaryType(List<String> dietTypes) {
+  /// Comprehensive meal filter: dietary type, cuisine, allergies, and health goal.
+  ///
+  /// Filtering priority:
+  ///  1. dietaryType  – mandatory match (vegetarian includes vegan)
+  ///  2. allergies     – exclude meals containing any user allergen
+  ///  3. cuisine       – prefer matching; if pool too small fall back to all
+  ///  4. healthGoal    – prefer matching; if pool too small fall back to all
+  List<Map<String, dynamic>> _filterMeals({
+    List<String> dietTypes = const [],
+    List<String> allergies = const [],
+    List<String> cuisines = const [],
+    String healthGoal = '',
+  }) {
     if (_allMeals == null) return [];
 
-    // If no specific diet types, use the full catalog.
-    if (dietTypes.isEmpty) return _allMeals!;
-
-    final matches = _allMeals!.where((meal) {
-      final mealDietaryType =
-          meal['dietaryType']?.toString().toLowerCase() ?? '';
-
-      // Check if any of the user's diet types match.
-      for (final userDietType in dietTypes) {
-        final normalizedUserType = userDietType.toLowerCase();
-
-        // Direct matches.
-        if (mealDietaryType == normalizedUserType) return true;
-
-        // Special case handling / loose matching.
-        if (normalizedUserType == 'vegan' && mealDietaryType == 'vegan') {
-          return true;
+    // ── Step 1: dietary type filter ──
+    List<Map<String, dynamic>> pool;
+    if (dietTypes.isEmpty) {
+      pool = List<Map<String, dynamic>>.from(_allMeals!);
+    } else {
+      pool = _allMeals!.where((meal) {
+        final mealDiet = meal['dietaryType']?.toString().toLowerCase() ?? '';
+        for (final ud in dietTypes) {
+          final u = ud.toLowerCase();
+          if (mealDiet == u) return true;
+          if (u == 'vegetarian' && (mealDiet == 'vegetarian' || mealDiet == 'vegan')) return true;
+          if (u == 'vegan' && mealDiet == 'vegan') return true;
+          if (u == 'non-veg' && mealDiet == 'non-vegetarian') return true;
+          if (u == 'non-vegetarian' && mealDiet == 'non-vegetarian') return true;
+          // Keto/Paleo/etc. – pass through if the JSON has a matching tag
+          if (mealDiet == u) return true;
         }
-        if (normalizedUserType == 'vegetarian' &&
-            (mealDietaryType == 'vegetarian' ||
-                mealDietaryType == 'vegan')) {
-          return true;
-        }
-        if (normalizedUserType == 'non-veg' &&
-            mealDietaryType == 'non-vegetarian') {
-          return true;
-        }
+        return false;
+      }).toList();
+      if (pool.isEmpty) pool = List<Map<String, dynamic>>.from(_allMeals!);
+    }
+
+    // ── Step 2: allergy exclusion ──
+    if (allergies.isNotEmpty) {
+      final lowerAllergies = allergies
+          .where((a) => a.toLowerCase() != 'none')
+          .map((a) => a.toLowerCase())
+          .toSet();
+      if (lowerAllergies.isNotEmpty) {
+        final safe = pool.where((meal) {
+          final present = (meal['allergensPresent'] as List<dynamic>?)
+                  ?.map((e) => e.toString().toLowerCase())
+                  .toSet() ??
+              <String>{};
+          return present.intersection(lowerAllergies).isEmpty;
+        }).toList();
+        if (safe.isNotEmpty) pool = safe;
       }
+    }
 
-      return false;
-    }).toList();
+    // ── Step 3: cuisine preference (soft filter) ──
+    if (cuisines.isNotEmpty) {
+      final lowerCuisines = cuisines.map((c) => c.toLowerCase()).toSet();
+      final cuisineMatch = pool.where((meal) {
+        final mc = meal['cuisine']?.toString().toLowerCase() ?? '';
+        return lowerCuisines.contains(mc);
+      }).toList();
+      // Only narrow the pool if we still have enough variety (>=20 meals)
+      if (cuisineMatch.length >= 20) pool = cuisineMatch;
+    }
 
-    // If nothing matched the user's diet labels (e.g. an unsupported tag),
-    // fall back to the full catalog so we still get varied plans.
-    return matches.isEmpty ? _allMeals! : matches;
+    // ── Step 4: health goal preference (soft filter) ──
+    if (healthGoal.isNotEmpty) {
+      final goalKey = healthGoal.toLowerCase().replaceAll(' ', '_');
+      final goalMatch = pool.where((meal) {
+        final goals = (meal['healthGoalFit'] as List<dynamic>?)
+                ?.map((e) => e.toString().toLowerCase())
+                .toSet() ??
+            <String>{};
+        return goals.contains(goalKey);
+      }).toList();
+      if (goalMatch.length >= 20) pool = goalMatch;
+    }
+
+    return pool;
   }
+
+
 
   /// Get meals varied by user ID and calendar date so each day looks different
   List<Meal> _getVariedMeals(
@@ -840,19 +1003,7 @@ class ApiService {
       final idx = (dayIndex + userOffset + typeOffset + i) % mealTypeFiltered.length;
       final mealData = mealTypeFiltered[idx];
 
-      selectedMeals.add(Meal(
-        id: _str(mealData['id']),
-        name: _str(mealData['name']).isEmpty ? 'Unknown Meal' : _str(mealData['name']),
-        mealType: _str(mealData['mealType']).isEmpty ? mealType : _str(mealData['mealType']),
-        calories: (mealData['calories'] as num?)?.toInt() ?? 300,
-        protein: (mealData['protein'] as num?)?.toDouble() ?? 10.0,
-        carbs: (mealData['carbs'] as num?)?.toDouble() ?? 40.0,
-        fat: (mealData['fat'] as num?)?.toDouble() ?? 8.0,
-        fiber: (mealData['fiber'] as num?)?.toDouble() ?? 5.0,
-        prepMinutes: (mealData['prepMinutes'] as num?)?.toInt() ?? 20,
-        ingredients: _stringList(mealData['ingredients']),
-        steps: _stringList(mealData['steps']),
-      ));
+      selectedMeals.add(_mealFromMap(mealData, fallbackType: mealType));
     }
 
     return selectedMeals;
@@ -1166,19 +1317,7 @@ class ApiService {
       
       // Convert to Meal objects and return
       return matchingMeals.take(10).map((mealData) {
-        return Meal(
-          id: _str(mealData['id']),
-          name: _str(mealData['name']).isEmpty ? 'Recipe' : _str(mealData['name']),
-          mealType: _str(mealData['mealType']).isEmpty ? 'lunch' : _str(mealData['mealType']),
-          calories: (mealData['calories'] as num?)?.toInt() ?? 300,
-          protein: (mealData['protein'] as num?)?.toDouble() ?? 10.0,
-          carbs: (mealData['carbs'] as num?)?.toDouble() ?? 40.0,
-          fat: (mealData['fat'] as num?)?.toDouble() ?? 8.0,
-          fiber: (mealData['fiber'] as num?)?.toDouble() ?? 5.0,
-          prepMinutes: (mealData['prepMinutes'] as num?)?.toInt() ?? 20,
-          ingredients: _stringList(mealData['ingredients']),
-          steps: _stringList(mealData['steps']),
-        );
+        return _mealFromMap(mealData, fallbackType: 'lunch');
       }).toList();
     } catch (_) {
       return [];
@@ -1191,9 +1330,14 @@ class ApiService {
     await _loadMealsData();
     
     try {
-      // Use local data with dietary filtering
+      // Use comprehensive filtering: diet + allergies + cuisine + goal
       final dietTypes = prefs?.dietTypes ?? ['vegetarian'];
-      final filteredMeals = _filterMealsByDietaryType(dietTypes);
+      final filteredMeals = _filterMeals(
+        dietTypes: dietTypes,
+        allergies: prefs?.allergies ?? [],
+        cuisines: prefs?.preferredCuisine ?? [],
+        healthGoal: prefs?.healthGoal ?? '',
+      );
       
       // Create a seed based on mealId for consistent alternatives
       final seed = mealId.hashCode;
@@ -1206,23 +1350,11 @@ class ApiService {
       
       if (alternatives.isEmpty) return _getDefaultAlternatives(mealType);
       
-      // Shuffle and select 2-3 alternatives
+      // Shuffle and select 3 alternatives
       alternatives.shuffle(random);
       
       return alternatives.take(3).map((mealData) {
-        return Meal(
-          id: _str(mealData['id']),
-          name: _str(mealData['name']).isEmpty ? 'Alternative Meal' : _str(mealData['name']),
-          mealType: _str(mealData['mealType']).isEmpty ? mealType : _str(mealData['mealType']),
-          calories: (mealData['calories'] as num?)?.toInt() ?? 300,
-          protein: (mealData['protein'] as num?)?.toDouble() ?? 10.0,
-          carbs: (mealData['carbs'] as num?)?.toDouble() ?? 40.0,
-          fat: (mealData['fat'] as num?)?.toDouble() ?? 8.0,
-          fiber: (mealData['fiber'] as num?)?.toDouble() ?? 5.0,
-          prepMinutes: (mealData['prepMinutes'] as num?)?.toInt() ?? 20,
-          ingredients: _stringList(mealData['ingredients']),
-          steps: _stringList(mealData['steps']),
-        );
+        return _mealFromMap(mealData, fallbackType: mealType);
       }).toList();
     } catch (_) {
       return _getDefaultAlternatives(mealType);
@@ -1236,7 +1368,12 @@ class ApiService {
     
     try {
       final dietTypes = prefs?.dietTypes ?? ['vegetarian'];
-      var filtered = _filterMealsByDietaryType(dietTypes);
+      var filtered = _filterMeals(
+        dietTypes: dietTypes,
+        allergies: prefs?.allergies ?? [],
+        cuisines: prefs?.preferredCuisine ?? [],
+        healthGoal: prefs?.healthGoal ?? '',
+      );
       if (filtered.isEmpty && _allMeals != null && _allMeals!.isNotEmpty) {
         filtered = _allMeals!;
       }
@@ -1251,23 +1388,27 @@ class ApiService {
           filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'lunch').toList());
       var dinnerPool = _dedupeById(
           filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'dinner').toList());
+      var nightPool = _dedupeById(
+          filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'night').toList());
 
-      // Use full JSON catalog to maximize variety (100+ breakfasts, 130+ lunches, 100+ dinners in meals_data.json)
-      // so we don't repeat the same meal every day. Fill from _allMeals first, then fallback.
+      // Use full JSON catalog to maximize variety
       final fullCatalog = _allMeals ?? [];
       final fallback = _getHardcodedMeals();
       breakfastPool = _ensurePoolSizeFromCatalog(breakfastPool, fullCatalog, fallback, 'breakfast', 7);
       lunchPool = _ensurePoolSizeFromCatalog(lunchPool, fullCatalog, fallback, 'lunch', 7);
       dinnerPool = _ensurePoolSizeFromCatalog(dinnerPool, fullCatalog, fallback, 'dinner', 7);
+      nightPool = _ensurePoolSizeFromCatalog(nightPool, fullCatalog, fallback, 'night', 7);
 
       final start = DateTime.parse(startDate);
       final plan = <String, List<Meal>>{};
       final usedBreakfastIds = <String>{};
       final usedLunchIds = <String>{};
       final usedDinnerIds = <String>{};
+      final usedNightIds = <String>{};
       String? lastBreakfastId;
       String? lastLunchId;
       String? lastDinnerId;
+      String? lastNightId;
 
       for (int i = 0; i < 7; i++) {
         final date = start.add(Duration(days: i));
@@ -1282,6 +1423,11 @@ class ApiService {
         final d = _pickOneNoRepeat(dinnerPool, dateStr, userId, 'dinner', usedDinnerIds, lastDinnerId);
         lastDinnerId = d.id;
         dayMeals.add(d);
+        if (nightPool.isNotEmpty) {
+          final n = _pickOneNoRepeat(nightPool, dateStr, userId, 'night', usedNightIds, lastNightId);
+          lastNightId = n.id;
+          dayMeals.add(n);
+        }
         plan[dateStr] = dayMeals;
       }
       return plan;
@@ -1341,32 +1487,7 @@ class ApiService {
   }
 
   /// Ensure pool has at least [minSize] options by adding fallback meals of [mealType] not already in pool
-  List<Map<String, dynamic>> _ensurePoolSize(
-    List<Map<String, dynamic>> pool,
-    List<Map<String, dynamic>> fallback,
-    String mealType,
-    int minSize,
-  ) {
-    if (pool.length >= minSize) return pool;
-    final typeLower = mealType.toLowerCase();
-    final existingIds = <String>{};
-    for (final m in pool) {
-      final id = _str(m['id']);
-      if (id.isNotEmpty) existingIds.add(id);
-    }
-    final toAdd = fallback
-        .where((m) =>
-            (m['mealType'] as String? ?? '').toLowerCase() == typeLower &&
-            !existingIds.contains(_str(m['id'])))
-        .toList();
-    final result = List<Map<String, dynamic>>.from(pool);
-    for (final m in toAdd) {
-      if (result.length >= minSize) break;
-      result.add(m);
-      existingIds.add(_str(m['id']));
-    }
-    return result;
-  }
+
 
   /// Pick one meal of [mealType] from [pool], avoiding ids in [usedIds] and avoiding [lastPickedId] when possible (no consecutive-day repeat).
   Meal _pickOneNoRepeat(
@@ -1400,23 +1521,11 @@ class ApiService {
     final typeOffset = mealType.hashCode.abs() % 100;
     final idx = (dayIndex + userOffset + typeOffset) % available.length;
     
-    final mealData = available[idx] as Map<String, dynamic>;
+    final mealData = available[idx];
     final id = _str(mealData['id']);
     if (id.isNotEmpty) usedIds.add(id);
 
-    return Meal(
-      id: id,
-      name: _str(mealData['name']).isEmpty ? 'Unknown Meal' : _str(mealData['name']),
-      mealType: _str(mealData['mealType']).isEmpty ? mealType : _str(mealData['mealType']),
-      calories: (mealData['calories'] as num?)?.toInt() ?? 300,
-      protein: (mealData['protein'] as num?)?.toDouble() ?? 10.0,
-      carbs: (mealData['carbs'] as num?)?.toDouble() ?? 40.0,
-      fat: (mealData['fat'] as num?)?.toDouble() ?? 8.0,
-      fiber: (mealData['fiber'] as num?)?.toDouble() ?? 5.0,
-      prepMinutes: (mealData['prepMinutes'] as num?)?.toInt() ?? 20,
-      ingredients: _stringList(mealData['ingredients']),
-      steps: _stringList(mealData['steps']),
-    );
+    return _mealFromMap(mealData, fallbackType: mealType);
   }
 
   Map<String, List<Meal>> _buildWeeklyPlanFallback(String startDate, String userId) {
@@ -1433,23 +1542,96 @@ class ApiService {
     return plan;
   }
 
-  /// Generate monthly meal plan (30 days)
+  /// Generate monthly meal plan for the full calendar month.
+  /// [daysCount] = number of days in the month (28-31).
+  /// Uses pool-based picking with used-ID resets every 7 days
+  /// so each week within the month looks varied.
   Future<Map<String, List<Meal>>> getMonthlyMealPlan(String userId, String startDate,
-      {UserProfile? profile, UserPreferences? prefs}) async {
+      {int daysCount = 30, UserProfile? profile, UserPreferences? prefs}) async {
     await _loadMealsData();
-    
+
     try {
+      final dietTypes = prefs?.dietTypes ?? ['vegetarian'];
+      var filtered = _filterMeals(
+        dietTypes: dietTypes,
+        allergies: prefs?.allergies ?? [],
+        cuisines: prefs?.preferredCuisine ?? [],
+        healthGoal: prefs?.healthGoal ?? '',
+      );
+      if (filtered.isEmpty && _allMeals != null && _allMeals!.isNotEmpty) {
+        filtered = _allMeals!;
+      }
+      if (filtered.isEmpty) {
+        return _getDefaultMonthlyPlan(startDate, daysCount: daysCount);
+      }
+
+      final fullCatalog = _allMeals ?? [];
+      final fallback = _getHardcodedMeals();
+
+      var breakfastPool = _dedupeById(
+          filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'breakfast').toList());
+      var lunchPool = _dedupeById(
+          filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'lunch').toList());
+      var dinnerPool = _dedupeById(
+          filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'dinner').toList());
+      var nightPool = _dedupeById(
+          filtered.where((m) => (m['mealType'] as String? ?? '').toLowerCase() == 'night').toList());
+
+      // Ensure enough meals for a whole week without repeats
+      breakfastPool = _ensurePoolSizeFromCatalog(breakfastPool, fullCatalog, fallback, 'breakfast', 7);
+      lunchPool = _ensurePoolSizeFromCatalog(lunchPool, fullCatalog, fallback, 'lunch', 7);
+      dinnerPool = _ensurePoolSizeFromCatalog(dinnerPool, fullCatalog, fallback, 'dinner', 7);
+      nightPool = _ensurePoolSizeFromCatalog(nightPool, fullCatalog, fallback, 'night', 7);
+
       final start = DateTime.parse(startDate);
       final plan = <String, List<Meal>>{};
-      
-      for (int i = 0; i < 30; i++) {
+
+      // Track used IDs — reset every 7 days so each week looks fresh
+      var usedBreakfastIds = <String>{};
+      var usedLunchIds = <String>{};
+      var usedDinnerIds = <String>{};
+      var usedNightIds = <String>{};
+      String? lastBreakfastId;
+      String? lastLunchId;
+      String? lastDinnerId;
+      String? lastNightId;
+
+      for (int i = 0; i < daysCount; i++) {
+        // Reset used IDs at the start of each 7-day window
+        if (i > 0 && i % 7 == 0) {
+          usedBreakfastIds = <String>{};
+          usedLunchIds = <String>{};
+          usedDinnerIds = <String>{};
+          usedNightIds = <String>{};
+        }
+
         final date = start.add(Duration(days: i));
         final dateStr = date.toIso8601String().split('T').first;
-        plan[dateStr] = await getMealPlan(userId, dateStr, profile: profile, prefs: prefs);
+        final dayMeals = <Meal>[];
+
+        final b = _pickOneNoRepeat(breakfastPool, dateStr, userId, 'breakfast', usedBreakfastIds, lastBreakfastId);
+        lastBreakfastId = b.id;
+        dayMeals.add(b);
+
+        final l = _pickOneNoRepeat(lunchPool, dateStr, userId, 'lunch', usedLunchIds, lastLunchId);
+        lastLunchId = l.id;
+        dayMeals.add(l);
+
+        final d = _pickOneNoRepeat(dinnerPool, dateStr, userId, 'dinner', usedDinnerIds, lastDinnerId);
+        lastDinnerId = d.id;
+        dayMeals.add(d);
+
+        if (nightPool.isNotEmpty) {
+          final n = _pickOneNoRepeat(nightPool, dateStr, userId, 'night', usedNightIds, lastNightId);
+          lastNightId = n.id;
+          dayMeals.add(n);
+        }
+
+        plan[dateStr] = dayMeals;
       }
       return plan;
     } catch (_) {
-      return _getDefaultMonthlyPlan(startDate);
+      return _getDefaultMonthlyPlan(startDate, daysCount: daysCount);
     }
   }
 
@@ -1896,6 +2078,50 @@ class ApiService {
             ],
           ),
         ];
+      case 'night':
+        return [
+          const Meal(
+            id: 'alt_n1',
+            name: 'Warm Turmeric Milk',
+            mealType: 'night',
+            calories: 120,
+            protein: 4,
+            carbs: 14,
+            fat: 5,
+            fiber: 0,
+            prepMinutes: 5,
+            ingredients: [
+              'Milk - 1 cup',
+              'Turmeric powder - 1/2 tsp',
+              'Honey - 1 tsp',
+            ],
+            steps: [
+              'Warm the milk.',
+              'Stir in turmeric and honey.',
+              'Serve warm before bed.',
+            ],
+          ),
+          const Meal(
+            id: 'alt_n2',
+            name: 'Mixed Nuts & Seeds',
+            mealType: 'night',
+            calories: 160,
+            protein: 6,
+            carbs: 8,
+            fat: 12,
+            fiber: 2,
+            prepMinutes: 2,
+            ingredients: [
+              'Almonds - 5',
+              'Walnuts - 3',
+              'Pumpkin seeds - 1 tbsp',
+            ],
+            steps: [
+              'Combine nuts and seeds in a small bowl.',
+              'Enjoy as a light pre-bed snack.',
+            ],
+          ),
+        ];
       default:
         return [];
     }
@@ -1915,11 +2141,11 @@ class ApiService {
   }
 
   /// Generate default monthly meal plan
-  Map<String, List<Meal>> _getDefaultMonthlyPlan(String startDate) {
+  Map<String, List<Meal>> _getDefaultMonthlyPlan(String startDate, {int daysCount = 30}) {
     final start = DateTime.parse(startDate);
     final plan = <String, List<Meal>>{};
     
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < daysCount; i++) {
       final date = start.add(Duration(days: i));
       final dateStr = date.toIso8601String().split('T').first;
       plan[dateStr] = _defaultMealsForDay();

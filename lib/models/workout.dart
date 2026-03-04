@@ -16,12 +16,21 @@ class WorkoutExercise {
       sets: json['sets'] ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'reps': reps,
+    'sets': sets,
+  };
 }
 
 class WorkoutPlan {
   final String id;
+  final int dayIndex;
   final String title;
   final String level;
+  final String activityLevel;
+  final String focusArea;
   final String location;
   final int durationMinutes;
   final String description;
@@ -33,8 +42,11 @@ class WorkoutPlan {
 
   const WorkoutPlan({
     required this.id,
+    this.dayIndex = 0,
     required this.title,
     required this.level,
+    this.activityLevel = '',
+    this.focusArea = '',
     required this.location,
     required this.durationMinutes,
     required this.description,
@@ -45,6 +57,9 @@ class WorkoutPlan {
     required this.coolDown,
   });
 
+  /// Total number of individual exercises across warm-up, main, and cool-down.
+  int get totalExerciseCount => warmUp.length + mainExercises.length + coolDown.length;
+
   factory WorkoutPlan.fromJson(Map<String, dynamic> json) {
     var warmUpList = json['warmUp'] as List? ?? [];
     var mainExercisesList = json['mainExercises'] as List? ?? [];
@@ -52,8 +67,11 @@ class WorkoutPlan {
 
     return WorkoutPlan(
       id: json['id'] ?? '',
+      dayIndex: json['dayIndex'] ?? 0,
       title: json['title'] ?? '',
       level: json['level'] ?? '',
+      activityLevel: json['activityLevel'] ?? '',
+      focusArea: json['focusArea'] ?? '',
       location: json['location'] ?? '',
       durationMinutes: json['durationMinutes'] ?? 0,
       description: json['description'] ?? '',

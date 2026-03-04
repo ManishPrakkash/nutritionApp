@@ -24,6 +24,7 @@ import '../../grocery/screens/grocery_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../workout/screens/workout_screen.dart';
+import '../../workout/providers/workout_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../providers/steps_provider.dart';
 import '../../streaks/screens/habit_tracker_screen.dart';
@@ -368,7 +369,8 @@ class _MealsPreview extends ConsumerWidget {
                         calories: meal.calories,
                         icon: meal.mealType == 'breakfast' ? LucideIcons.coffee :
                               meal.mealType == 'lunch' ? LucideIcons.utensilsCrossed :
-                              meal.mealType == 'dinner' ? LucideIcons.chefHat : LucideIcons.apple,
+                              meal.mealType == 'dinner' ? LucideIcons.chefHat :
+                              meal.mealType == 'night' ? LucideIcons.moon : LucideIcons.apple,
                       ),
                     ),
                     if (!isLast) const Divider(height: 32),
@@ -434,9 +436,30 @@ class _WorkoutPreview extends ConsumerWidget {
     final workoutAsync = uid == null
         ? const AsyncValue<Map<String, dynamic>?>.data(null)
         : ref.watch(_todayWorkoutProvider((uid, today)));
+    final todayPlanAsync = ref.watch(todayWorkoutProvider);
+    final completionMap = ref.watch(exerciseCompletionProvider);
 
     final workoutData = workoutAsync.value;
     final bool completed = (workoutData?['completed'] as bool?) ?? false;
+
+    // Get today's plan info
+    String title = 'Today\'s Workout';
+    String subtitle = 'Loading...';
+    double progress = 0.0;
+    todayPlanAsync.whenData((plan) {
+      title = plan.title;
+      subtitle = '${plan.durationMinutes} min • ${plan.level} • ${plan.focusArea}';
+      final allNames = [
+        ...plan.warmUp.map((e) => e.name),
+        ...plan.mainExercises.map((e) => e.name),
+        ...plan.coolDown.map((e) => e.name),
+      ];
+      final total = allNames.length;
+      final doneCount = allNames.where((n) => completionMap[n] == true).length;
+      progress = total == 0 ? 0.0 : doneCount / total;
+    });
+
+    final pct = (progress * 100).round();
 
     return Container(
       decoration: premiumCardDecoration(),
@@ -459,8 +482,8 @@ class _WorkoutPreview extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Beginner Home Workout', style: AppTypography.textTheme.titleMedium),
-                    Text('30 min • Intermediate', style: AppTypography.textTheme.bodySmall),
+                    Text(title, style: AppTypography.textTheme.titleMedium),
+                    Text(subtitle, style: AppTypography.textTheme.bodySmall),
                   ],
                 ),
               ),
@@ -491,6 +514,32 @@ class _WorkoutPreview extends ConsumerWidget {
                 ),
             ],
           ),
+          if (progress > 0 && !completed) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 6,
+                      backgroundColor: AppColors.border,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '$pct%',
+                  style: AppTypography.textTheme.bodySmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,

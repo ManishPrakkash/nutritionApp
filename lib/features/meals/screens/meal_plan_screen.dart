@@ -83,7 +83,7 @@ class _MealPlanScreenState extends ConsumerState<MealPlanScreen>
               tabs: const [
                 Tab(text: 'Daily'),
                 Tab(text: 'Weekly'),
-                Tab(text: 'Program'),
+                Tab(text: 'Monthly'),
               ],
             ),
           ),
@@ -249,6 +249,7 @@ class _WeeklyMealView extends ConsumerWidget {
       case 'breakfast': return AppColors.info;
       case 'lunch': return AppColors.warning;
       case 'dinner': return AppColors.success;
+      case 'night': return const Color(0xFF7C6DCD);
       default: return AppColors.textMuted;
     }
   }
@@ -257,8 +258,16 @@ class _WeeklyMealView extends ConsumerWidget {
 class _MonthlyMealView extends ConsumerWidget {
   const _MonthlyMealView();
 
+  static const _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final monthLabel = '${_monthNames[now.month - 1]} 1 – $daysInMonth';
     final async = ref.watch(monthlyMealPlanProvider);
     return async.when(
       data: (planMap) => ListView(
@@ -267,7 +276,7 @@ class _MonthlyMealView extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Monthly Program', style: AppTypography.textTheme.titleMedium),
+              Text(monthLabel, style: AppTypography.textTheme.titleMedium),
               IconButton(
                 onPressed: () => ref.invalidate(monthlyMealPlanProvider),
                 icon: const Icon(LucideIcons.refreshCw, size: 16),
@@ -457,6 +466,8 @@ class _MealCard extends ConsumerWidget {
         return 'MIDDAY';
       case 'dinner':
         return 'EVENING';
+      case 'night':
+        return 'NIGHT';
       default:
         return 'SUPPLEMENT';
     }

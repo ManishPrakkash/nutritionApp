@@ -1,7 +1,7 @@
 class Meal {
   final String id;
   final String name;
-  final String mealType; // breakfast, lunch, dinner, snack
+  final String mealType; // breakfast, lunch, dinner, night, snack
   final int calories;
   final double protein;
   final double carbs;
@@ -14,6 +14,11 @@ class Meal {
   final int prepMinutes;
   final bool isEaten;
   final bool isFavorite;
+  final String dietaryType;       // vegetarian, vegan, non-vegetarian
+  final String cuisine;           // indian, asian, mediterranean, continental, mexican
+  final int healthScore;          // 0-100
+  final List<String> allergensPresent; // dairy, gluten, nuts, shellfish, eggs
+  final List<String> healthGoalFit;   // weight_loss, muscle_gain, maintain_weight, etc.
 
   const Meal({
     required this.id,
@@ -31,6 +36,11 @@ class Meal {
     this.prepMinutes = 0,
     this.isEaten = false,
     this.isFavorite = false,
+    this.dietaryType = '',
+    this.cuisine = '',
+    this.healthScore = 0,
+    this.allergensPresent = const [],
+    this.healthGoalFit = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -49,6 +59,11 @@ class Meal {
         'prepMinutes': prepMinutes,
         'isEaten': isEaten,
         'isFavorite': isFavorite,
+        'dietaryType': dietaryType,
+        'cuisine': cuisine,
+        'healthScore': healthScore,
+        'allergensPresent': allergensPresent,
+        'healthGoalFit': healthGoalFit,
       };
 
   static String _str(dynamic v) => v == null ? '' : v.toString();
@@ -74,6 +89,11 @@ class Meal {
         prepMinutes: (json['prepMinutes'] as num?)?.toInt() ?? 0,
         isEaten: json['isEaten'] as bool? ?? false,
         isFavorite: json['isFavorite'] as bool? ?? false,
+        dietaryType: _str(json['dietaryType']),
+        cuisine: _str(json['cuisine']),
+        healthScore: (json['healthScore'] as num?)?.toInt() ?? 0,
+        allergensPresent: _stringList(json['allergensPresent']),
+        healthGoalFit: _stringList(json['healthGoalFit']),
       );
 
   static List<String> _stringList(dynamic v) {
@@ -98,6 +118,11 @@ class Meal {
     int? prepMinutes,
     bool? isEaten,
     bool? isFavorite,
+    String? dietaryType,
+    String? cuisine,
+    int? healthScore,
+    List<String>? allergensPresent,
+    List<String>? healthGoalFit,
   }) =>
       Meal(
         id: id ?? this.id,
@@ -115,6 +140,11 @@ class Meal {
         prepMinutes: prepMinutes ?? this.prepMinutes,
         isEaten: isEaten ?? this.isEaten,
         isFavorite: isFavorite ?? this.isFavorite,
+        dietaryType: dietaryType ?? this.dietaryType,
+        cuisine: cuisine ?? this.cuisine,
+        healthScore: healthScore ?? this.healthScore,
+        allergensPresent: allergensPresent ?? this.allergensPresent,
+        healthGoalFit: healthGoalFit ?? this.healthGoalFit,
       );
 }
 

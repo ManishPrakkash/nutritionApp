@@ -148,6 +148,21 @@ class FirestoreService {
     return snap.data();
   }
 
+  /// Persist per-exercise completion map for a given day, scoped to workout ID.
+  Future<void> saveWorkoutExerciseCompletion(
+      String uid, String date, String workoutId, Map<String, bool> completedExercises) async {
+    await _firestore
+        .collection(AppConstants.workoutLogsCollection)
+        .doc(uid)
+        .collection('days')
+        .doc(date)
+        .set({
+      'completedExercises': completedExercises,
+      'workoutId': workoutId,
+      'date': date,
+    }, SetOptions(merge: true));
+  }
+
   Future<void> saveStreak(String uid, {
     required int currentStreak,
     required int longestStreak,

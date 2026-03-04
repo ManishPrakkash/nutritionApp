@@ -70,22 +70,27 @@ final mealAlternativesProvider = FutureProvider.family<List<Meal>, Map<String, S
   );
 });
 
-/// Get weekly meal plan (future 7 days)
+/// Get weekly meal plan (next 7 days starting from TOMORROW — today is in Daily tab)
 final weeklyMealPlanProvider = FutureProvider<Map<String, List<Meal>>>((ref) async {
   final uid = ref.watch(authUserIdProvider);
   if (uid == null) return {};
   final profile = await ref.watch(profileFutureProvider.future);
   final prefs = await ref.watch(preferencesFutureProvider.future);
-  final today = DateTime.now().toIso8601String().split('T').first;
-  return ApiService.instance.getWeeklyMealPlan(uid, today, profile: profile, prefs: prefs);
+  final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T').first;
+  return ApiService.instance.getWeeklyMealPlan(uid, tomorrow, profile: profile, prefs: prefs);
 });
 
-/// Get monthly meal plan (future 30 days)
+/// Get monthly meal plan for the FULL current calendar month (1st to last day).
+/// Resets automatically when the month changes.
 final monthlyMealPlanProvider = FutureProvider<Map<String, List<Meal>>>((ref) async {
   final uid = ref.watch(authUserIdProvider);
   if (uid == null) return {};
   final profile = await ref.watch(profileFutureProvider.future);
   final prefs = await ref.watch(preferencesFutureProvider.future);
-  final today = DateTime.now().toIso8601String().split('T').first;
-  return ApiService.instance.getMonthlyMealPlan(uid, today, profile: profile, prefs: prefs);
+  final now = DateTime.now();
+  final firstOfMonth = DateTime(now.year, now.month, 1).toIso8601String().split('T').first;
+  final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+  return ApiService.instance.getMonthlyMealPlan(
+    uid, firstOfMonth, daysCount: daysInMonth, profile: profile, prefs: prefs,
+  );
 });
