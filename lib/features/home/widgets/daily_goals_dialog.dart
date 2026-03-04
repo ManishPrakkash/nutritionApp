@@ -57,10 +57,10 @@ class _DailyGoalsDialogState extends State<DailyGoalsDialog> {
   void initState() {
     super.initState();
     _waterCtrl =
-        TextEditingController(text: widget.defaultWater.toStringAsFixed(1));
-    _stepsCtrl = TextEditingController(text: widget.defaultSteps.toString());
+        TextEditingController(text: widget.defaultWater > 0 ? widget.defaultWater.toStringAsFixed(1) : '');
+    _stepsCtrl = TextEditingController(text: widget.defaultSteps > 0 ? widget.defaultSteps.toString() : '');
     _sleepCtrl =
-        TextEditingController(text: widget.defaultSleep.toStringAsFixed(1));
+        TextEditingController(text: widget.defaultSleep > 0 ? widget.defaultSleep.toStringAsFixed(1) : '');
   }
 
   @override
@@ -76,9 +76,10 @@ class _DailyGoalsDialogState extends State<DailyGoalsDialog> {
     final steps = int.tryParse(_stepsCtrl.text.trim());
     final sleep = double.tryParse(_sleepCtrl.text.trim());
 
-    if (water == null || steps == null || sleep == null) {
+    if (water == null || steps == null || sleep == null ||
+        water <= 0 || steps <= 0 || sleep <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter valid numbers')),
+        const SnackBar(content: Text('Please enter all three goals (must be greater than 0)')),
       );
       return;
     }
@@ -93,7 +94,9 @@ class _DailyGoalsDialogState extends State<DailyGoalsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
+    return PopScope(
+      canPop: false,
+      child: Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: AppColors.surface,
       child: Padding(
@@ -173,6 +176,7 @@ class _DailyGoalsDialogState extends State<DailyGoalsDialog> {
           ],
         ),
       ),
+    ),
     );
   }
 }

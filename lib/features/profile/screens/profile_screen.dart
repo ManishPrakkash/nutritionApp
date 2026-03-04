@@ -74,11 +74,6 @@ class ProfileScreen extends ConsumerWidget {
                           icon: LucideIcons.flame,
                           label: streakLabel,
                         ),
-                        const SizedBox(width: 12),
-                        const _StatusBadge(
-                          icon: LucideIcons.trophy,
-                          label: 'Elite',
-                        ),
                       ],
                     ),
                   ],

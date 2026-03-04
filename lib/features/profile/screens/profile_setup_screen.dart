@@ -16,7 +16,7 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
   /// When true, load existing preferences and on Finish pop back instead of going to Home.
   final bool editMode;
 
-  const ProfileSetupScreen({super.key, this.initialStep = 0, this.editMode = false, required this.stepsGoal});
+  const ProfileSetupScreen({super.key, this.initialStep = 0, this.editMode = false, this.stepsGoal = 10000});
 
   @override
   ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();

@@ -4,12 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../services/auth_service.dart';
 import '../../../models/user_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../../profile/providers/profile_provider.dart';
-import '../../profile/screens/steps_setup_screen.dart';
+import '../../profile/screens/profile_setup_screen.dart';
 import 'onboarding_screen.dart';
 import '../../home/screens/home_screen.dart';
 
@@ -95,14 +94,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             } else {
               // Profile exists but setup not complete
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const StepsSetupScreen()),
+                MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
                 (route) => false,
               );
             }
           } else {
             // Authenticated but no profile found - need to complete setup
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const StepsSetupScreen()),
+              MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
               (route) => false,
             );
           }
@@ -110,7 +109,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           debugPrint('Profile loading error: $e');
           // Error loading profile data - user might be new or having connection issues
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const StepsSetupScreen()),
+            MaterialPageRoute(builder: (_) => const ProfileSetupScreen()),
             (route) => false,
           );
         }

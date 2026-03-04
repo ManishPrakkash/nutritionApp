@@ -7,12 +7,41 @@ import '../../profile/providers/profile_provider.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService.instance);
 
+/// Tracks meal swap overrides: originalMealId → replacementMeal.
+/// All views consult this so a swap in any tab is reflected everywhere.
+class MealSwapNotifier extends StateNotifier<Map<String, Meal>> {
+  MealSwapNotifier() : super({});
+
+  void recordSwap(String originalMealId, Meal replacement) {
+    state = {...state, originalMealId: replacement};
+  }
+}
+
+final mealSwapOverridesProvider =
+    StateNotifierProvider<MealSwapNotifier, Map<String, Meal>>(
+        (ref) => MealSwapNotifier());
+
+/// Apply swap overrides to a list of meals.
+List<Meal> _applySwaps(List<Meal> meals, Map<String, Meal> overrides) {
+  if (overrides.isEmpty) return meals;
+  return meals.map((m) => overrides[m.id] ?? m).toList();
+}
+
+/// Apply swap overrides to a map of date → meals.
+Map<String, List<Meal>> _applySwapsToMap(
+    Map<String, List<Meal>> planMap, Map<String, Meal> overrides) {
+  if (overrides.isEmpty) return planMap;
+  return planMap.map((date, meals) => MapEntry(date, _applySwaps(meals, overrides)));
+}
+
 final mealPlanProvider = FutureProvider.family<List<Meal>, String>((ref, date) async {
   final uid = ref.watch(authUserIdProvider);
   if (uid == null) return [];
   final profile = await ref.watch(profileFutureProvider.future);
   final prefs = await ref.watch(preferencesFutureProvider.future);
-  return ApiService.instance.getMealPlan(uid, date, profile: profile, prefs: prefs);
+  final overrides = ref.watch(mealSwapOverridesProvider);
+  final meals = await ApiService.instance.getMealPlan(uid, date, profile: profile, prefs: prefs);
+  return _applySwaps(meals, overrides);
 });
 
 /// Last N days date strings (oldest first).
@@ -76,8 +105,10 @@ final weeklyMealPlanProvider = FutureProvider<Map<String, List<Meal>>>((ref) asy
   if (uid == null) return {};
   final profile = await ref.watch(profileFutureProvider.future);
   final prefs = await ref.watch(preferencesFutureProvider.future);
+  final overrides = ref.watch(mealSwapOverridesProvider);
   final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T').first;
-  return ApiService.instance.getWeeklyMealPlan(uid, tomorrow, profile: profile, prefs: prefs);
+  final plan = await ApiService.instance.getWeeklyMealPlan(uid, tomorrow, profile: profile, prefs: prefs);
+  return _applySwapsToMap(plan, overrides);
 });
 
 /// Get monthly meal plan for the FULL current calendar month (1st to last day).
@@ -87,10 +118,12 @@ final monthlyMealPlanProvider = FutureProvider<Map<String, List<Meal>>>((ref) as
   if (uid == null) return {};
   final profile = await ref.watch(profileFutureProvider.future);
   final prefs = await ref.watch(preferencesFutureProvider.future);
+  final overrides = ref.watch(mealSwapOverridesProvider);
   final now = DateTime.now();
   final firstOfMonth = DateTime(now.year, now.month, 1).toIso8601String().split('T').first;
   final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-  return ApiService.instance.getMonthlyMealPlan(
+  final plan = await ApiService.instance.getMonthlyMealPlan(
     uid, firstOfMonth, daysCount: daysInMonth, profile: profile, prefs: prefs,
   );
+  return _applySwapsToMap(plan, overrides);
 });

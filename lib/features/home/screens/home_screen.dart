@@ -71,20 +71,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _checkDailyGoals(String uid) async {
     final today = DateTime.now().toIso8601String().split('T').first;
     final existing = await FirestoreService.instance.getDailyGoals(uid, today);
-    if (existing != null) return; // Already set today
+    if (existing != null) {
+      // Check if all 3 goals were actually filled (non-zero)
+      final water = (existing['water'] as num?)?.toDouble() ?? 0;
+      final steps = (existing['steps'] as num?)?.toInt() ?? 0;
+      final sleep = (existing['sleep'] as num?)?.toDouble() ?? 0;
+      if (water > 0 && steps > 0 && sleep > 0) return; // All set
+    }
     if (!mounted) return;
-    final prefs = ref.read(preferencesFutureProvider).valueOrNull;
-    final goals = GoalService.computeTodayGoals(
-      profile: ref.read(profileProvider).valueOrNull,
-      preferences: prefs,
-    );
-    await DailyGoalsDialog.show(
-      context,
-      uid: uid,
-      defaultWater: goals.waterLiters,
-      defaultSteps: goals.stepsTarget,
-      defaultSleep: goals.sleepHours,
-    );
+    // Keep showing dialog until all goals are entered
+    bool? saved;
+    while (saved != true && mounted) {
+      saved = await DailyGoalsDialog.show(
+        context,
+        uid: uid,
+        defaultWater: 0,
+        defaultSteps: 0,
+        defaultSleep: 0,
+      );
+    }
   }
 
   @override

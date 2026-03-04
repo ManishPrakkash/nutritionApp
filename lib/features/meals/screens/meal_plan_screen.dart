@@ -5,13 +5,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/meal.dart';
-import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../health_risk/providers/predictions_provider.dart';
-import '../../profile/providers/profile_provider.dart';
 import '../providers/meal_provider.dart';
 import 'meal_detail_screen.dart';
-import '../../../services/notification_service.dart';
 
 class MealPlanScreen extends ConsumerStatefulWidget {
   const MealPlanScreen({super.key});
@@ -277,12 +274,27 @@ class _MonthlyMealView extends ConsumerWidget {
             itemBuilder: (context, index) {
               final entry = planMap.entries.elementAt(index);
               final totalCal = entry.value.fold(0, (sum, meal) => sum + meal.calories);
+              final isToday = entry.key == DateTime.now().toIso8601String().split('T').first;
               return InkWell(
                 borderRadius: BorderRadius.circular(20),
                 onTap: () => _showDayMealsPopup(context, entry.key, entry.value),
                 child: Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: premiumCardDecoration(),
+                  decoration: BoxDecoration(
+                    color: isToday ? AppColors.primary.withOpacity(0.06) : AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isToday ? AppColors.primary : AppColors.border,
+                      width: isToday ? 2 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -441,6 +453,7 @@ class _DailyView extends StatefulWidget {
 
 class _DailyViewState extends State<_DailyView> {
   late List<Meal> _meals;
+  final Set<String> _doneMealIds = {};
 
   @override
   void initState() {
@@ -459,7 +472,18 @@ class _DailyViewState extends State<_DailyView> {
     setState(() {
       final index = _meals.indexWhere((m) => m.id == original.id);
       if (index != -1) {
+        _doneMealIds.remove(original.id);
         _meals[index] = replacement;
+      }
+    });
+  }
+
+  void _toggleDone(String mealId) {
+    setState(() {
+      if (_doneMealIds.contains(mealId)) {
+        _doneMealIds.remove(mealId);
+      } else {
+        _doneMealIds.add(mealId);
       }
     });
   }
@@ -492,6 +516,8 @@ class _DailyViewState extends State<_DailyView> {
             child: _MealCard(
               meal: m,
               onMealSwapped: (alt) => _handleSwap(originalMeal, alt),
+              isDone: _doneMealIds.contains(m.id),
+              onToggleDone: () => _toggleDone(m.id),
             ),
           );
         }),
@@ -520,11 +546,18 @@ class _DailyViewState extends State<_DailyView> {
   }
 }
 
-class _MealCard extends ConsumerWidget {
+class _MealCard extends ConsumerStatefulWidget {
   final Meal meal;
   final ValueChanged<Meal> onMealSwapped;
+  final bool isDone;
+  final VoidCallback onToggleDone;
 
-  const _MealCard({required this.meal, required this.onMealSwapped});
+  const _MealCard({
+    required this.meal,
+    required this.onMealSwapped,
+    required this.isDone,
+    required this.onToggleDone,
+  });
 
   static String _typeLabel(String type) {
     switch (type) {
@@ -542,191 +575,186 @@ class _MealCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      decoration: premiumCardDecoration(),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _typeLabel(meal.mealType),
-                  style: AppTypography.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                Text(
-                  '${meal.calories} kcal',
-                  style: AppTypography.textTheme.titleSmall,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              meal.name,
-              style: AppTypography.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _MacroItem(label: 'Prot', value: '${meal.protein}g'),
-                  _MacroItem(label: 'Carb', value: '${meal.carbs}g'),
-                  _MacroItem(label: 'Fat', value: '${meal.fat}g'),
-                  _MacroItem(label: 'Fib', value: '${meal.fiber}g'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => MealDetailScreen(meal: meal),
-                        ),
-                      );
-                    },
-                    icon: const Icon(LucideIcons.chefHat, size: 14),
-                    label: const Text('Recipe'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 44),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _showSwapOptions(context, ref, onMealSwapped),
-                    icon: const Icon(LucideIcons.refreshCw, size: 14),
-                    label: const Text('Swap'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 44),
-                      padding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ],
+  ConsumerState<_MealCard> createState() => _MealCardState();
+}
+
+class _MealCardState extends ConsumerState<_MealCard> {
+  bool _swapping = false;
+
+  Future<void> _instantSwap() async {
+    setState(() => _swapping = true);
+    try {
+      final alternatives = await ref.read(mealAlternativesProvider({
+        'mealId': widget.meal.id,
+        'mealType': widget.meal.mealType,
+      }).future);
+      if (alternatives.isNotEmpty && mounted) {
+        // Record swap globally so all views reflect the change
+        ref.read(mealSwapOverridesProvider.notifier)
+            .recordSwap(widget.meal.id, alternatives.first);
+        widget.onMealSwapped(alternatives.first);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Swapped to "${alternatives.first.name}"'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No alternatives available'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Swap failed. Try again.')),
+        );
+      }
+    }
+    if (mounted) setState(() => _swapping = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final meal = widget.meal;
+    final isDone = widget.isDone;
+    return Opacity(
+      opacity: isDone ? 0.6 : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDone ? AppColors.success.withOpacity(0.05) : AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDone ? AppColors.success.withOpacity(0.4) : AppColors.border,
+            width: isDone ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-      ),
-    );
-  }
-  
-  void _showSwapOptions(BuildContext context, WidgetRef ref, ValueChanged<Meal> onSelected) {
-    final alternativesFuture = ref.read(mealAlternativesProvider({
-      'mealId': meal.id,
-      'mealType': meal.mealType,
-    }).future);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                border: Border(bottom: BorderSide(color: AppColors.border)),
-              ),
-              child: Row(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Swap ${_typeLabel(meal.mealType)}',
-                    style: AppTypography.textTheme.titleMedium,
+                  Row(
+                    children: [
+                      Text(
+                        _MealCard._typeLabel(meal.mealType),
+                        style: AppTypography.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                      if (isDone) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+                      ],
+                    ],
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(LucideIcons.x, size: 20),
+                  Text(
+                    '${meal.calories} kcal',
+                    style: AppTypography.textTheme.titleSmall,
                   ),
                 ],
               ),
-            ),
-            Expanded(
-              child: FutureBuilder<List<Meal>>(
-                future: alternativesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.primary),
-                    );
-                  }
-
-                  if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(LucideIcons.chefHat, size: 48, color: AppColors.textMuted),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No alternatives available',
-                            style: AppTypography.textTheme.titleMedium?.copyWith(color: AppColors.textMuted),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Try refreshing your meal plan for new options',
-                            style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(24),
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final alternative = snapshot.data![index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _SwapMealCard(
-                          meal: alternative,
-                          onSwap: () {
-                            Navigator.pop(context);
-                            onSelected(alternative);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Swapped to "${alternative.name}"'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
+              const SizedBox(height: 16),
+              Text(
+                meal.name,
+                style: AppTypography.textTheme.titleMedium?.copyWith(
+                  decoration: isDone ? TextDecoration.lineThrough : null,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _MacroItem(label: 'Prot', value: '${meal.protein}g'),
+                    _MacroItem(label: 'Carb', value: '${meal.carbs}g'),
+                    _MacroItem(label: 'Fat', value: '${meal.fat}g'),
+                    _MacroItem(label: 'Fib', value: '${meal.fiber}g'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MealDetailScreen(meal: meal),
+                          ),
+                        );
+                      },
+                      icon: const Icon(LucideIcons.chefHat, size: 14),
+                      label: const Text('Recipe'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _swapping ? null : _instantSwap,
+                      icon: _swapping
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(LucideIcons.refreshCw, size: 14),
+                      label: const Text('Swap'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 44),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: isDone
+                        ? ElevatedButton.icon(
+                            onPressed: widget.onToggleDone,
+                            icon: const Icon(Icons.check_circle, size: 14),
+                            label: const Text('Done'),
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(0, 44),
+                              padding: EdgeInsets.zero,
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                            ),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: widget.onToggleDone,
+                            icon: const Icon(Icons.check_circle_outline, size: 14),
+                            label: const Text('Done'),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 44),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -753,86 +781,6 @@ class _MacroItem extends StatelessWidget {
           style: AppTypography.textTheme.bodySmall?.copyWith(fontSize: 10, color: AppColors.textMuted),
         ),
       ],
-    );
-  }
-}
-
-class _SwapMealCard extends StatelessWidget {
-  final Meal meal;
-  final VoidCallback onSwap;
-
-  const _SwapMealCard({required this.meal, required this.onSwap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: premiumCardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      meal.name,
-                      style: AppTypography.textTheme.titleMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          '${meal.calories} kcal',
-                          style: AppTypography.textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          '${meal.prepMinutes} min',
-                          style: AppTypography.textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: onSwap,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(80, 36),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-                child: const Text('Select'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _MacroItem(label: 'Prot', value: '${meal.protein}g'),
-                _MacroItem(label: 'Carb', value: '${meal.carbs}g'),
-                _MacroItem(label: 'Fat', value: '${meal.fat}g'),
-                _MacroItem(label: 'Fib', value: '${meal.fiber}g'),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

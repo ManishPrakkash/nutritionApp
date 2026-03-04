@@ -4,6 +4,7 @@ import 'package:health_nutrition_app/core/icons/lucide_fallback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../home/services/streak_service.dart';
 import '../providers/streak_provider.dart';
 
 class StreaksScreen extends ConsumerWidget {
@@ -11,9 +12,15 @@ class StreaksScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final streakData = ref.watch(streakProvider).valueOrNull;
-    final currentStreakValue = streakCount(streakData);
+    final currentStreakAsync = ref.watch(currentStreakProvider);
+    final weeklyProgressAsync = ref.watch(weeklyProgressProvider);
     final badgesAsync = ref.watch(userBadgesProvider);
+
+    final currentStreakValue = currentStreakAsync.when(
+      data: (streak) => streak,
+      loading: () => 0,
+      error: (_, __) => 0,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -43,16 +50,33 @@ class StreaksScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-                            .asMap()
-                            .entries
-                            .map((e) => _DayNode(
-                                  label: e.value,
-                                  isActive: e.key < (DateTime.now().weekday % 7),
-                                ))
-                            .toList(),
+                      weeklyProgressAsync.when(
+                        data: (weeklyProgress) {
+                          // weeklyProgress is Mon..Sun (index 0..6)
+                          // Display as S M T W T F S (Sun first)
+                          final labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(7, (i) {
+                              return _DayNode(
+                                label: labels[i],
+                                isActive: weeklyProgress[i],
+                              );
+                            }),
+                          );
+                        },
+                        loading: () => Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                              .map((l) => _DayNode(label: l, isActive: false))
+                              .toList(),
+                        ),
+                        error: (_, __) => Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                              .map((l) => _DayNode(label: l, isActive: false))
+                              .toList(),
+                        ),
                       ),
                     ],
                   ),

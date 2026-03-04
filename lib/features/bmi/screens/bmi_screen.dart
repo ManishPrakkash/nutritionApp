@@ -4,9 +4,7 @@ import 'package:health_nutrition_app/core/icons/lucide_fallback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../profile/providers/profile_provider.dart';
 
 class BmiScreen extends ConsumerStatefulWidget {
   const BmiScreen({super.key});
@@ -19,7 +17,6 @@ class _BmiScreenState extends ConsumerState<BmiScreen> {
   double _weight = 70;
   double _height = 170;
   String _activityLevel = 'moderate';
-  bool _saving = false;
 
   double get _bmi => _weight / ((_height / 100) * (_height / 100));
   int get _age => ref.read(profileProvider).valueOrNull?.age ?? 30;
@@ -72,40 +69,7 @@ class _BmiScreenState extends ConsumerState<BmiScreen> {
     return 'Obese';
   }
 
-  Future<void> _saveToDb() async {
-    final uid = ref.read(authUserIdProvider);
-    final profile = await ref.read(profileFutureProvider.future);
-    if (uid == null || profile == null) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign in to save')),
-      );
-      return;
-    }
-    setState(() => _saving = true);
-    try {
-      await FirestoreService.instance.addWeightLog(uid, DateTime.now(), _weight);
-      final updated = profile.copyWith(
-        weightKg: _weight,
-        heightCm: _height,
-        bmi: _bmi,
-        bmr: _bmr,
-        tdee: _tdee,
-      );
-      await saveProfile(ref, updated);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Intelligence profile updated')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Update failed: $e')),
-        );
-      }
-    }
-    if (mounted) setState(() => _saving = false);
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -270,13 +234,7 @@ class _BmiScreenState extends ConsumerState<BmiScreen> {
                             .toList(),
                         onChanged: (v) => setState(() => _activityLevel = v ?? 'moderate'),
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: _saving ? null : _saveToDb,
-                        child: _saving
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Text('UPDATE BIOMETRICS'),
-                      ),
+
                     ],
                   ),
                 ),

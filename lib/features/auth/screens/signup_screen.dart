@@ -9,7 +9,7 @@ import '../../../core/utils/auth_error_messages.dart';
 import '../../../core/utils/validators.dart';
 import '../../../models/user_profile.dart';
 import '../providers/auth_provider.dart';
-import '../../profile/screens/steps_setup_screen.dart';
+import '../../profile/screens/profile_setup_screen.dart';
 import 'login_screen.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -77,7 +77,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-            builder: (_) => const StepsSetupScreen()),
+            builder: (_) => const ProfileSetupScreen()),
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
@@ -95,7 +95,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       );
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-            builder: (_) => const StepsSetupScreen()),
+            builder: (_) => const ProfileSetupScreen()),
         (route) => false,
       );
     }

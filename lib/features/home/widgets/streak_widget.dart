@@ -6,6 +6,7 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../streaks/providers/streak_provider.dart';
 import '../../streaks/screens/streaks_screen.dart';
+import '../services/streak_service.dart';
 
 class StreakWidget extends ConsumerWidget {
   const StreakWidget({super.key});
@@ -14,6 +15,7 @@ class StreakWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final streakData = ref.watch(streakProvider).valueOrNull;
     final streak = streakCount(streakData);
+    final weeklyProgressAsync = ref.watch(weeklyProgressProvider);
     return Container(
       decoration: premiumCardDecoration(),
       child: InkWell(
@@ -51,39 +53,45 @@ class StreakWidget extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(7, (i) {
+              weeklyProgressAsync.when(
+                data: (weeklyProgress) {
                   final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                  final isActive = i < 5;
-                  return Column(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: isActive ? AppColors.primary : AppColors.background,
-                          borderRadius: BorderRadius.circular(10),
-                          border: isActive ? null : Border.all(color: AppColors.border),
-                        ),
-                        child: Center(
-                          child: Text(
-                            days[i],
-                            style: AppTypography.textTheme.titleSmall?.copyWith(
-                              color: isActive ? Colors.white : AppColors.textMuted,
-                              fontSize: 12,
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(7, (i) {
+                      final isActive = weeklyProgress[i];
+                      return Column(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.primary : AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                              border: isActive ? null : Border.all(color: AppColors.border),
+                            ),
+                            child: Center(
+                              child: Text(
+                                days[i],
+                                style: AppTypography.textTheme.titleSmall?.copyWith(
+                                  color: isActive ? Colors.white : AppColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (isActive)
-                        const Icon(LucideIcons.check, size: 12, color: AppColors.success)
-                      else
-                        const SizedBox(height: 12),
-                    ],
+                          const SizedBox(height: 8),
+                          if (isActive)
+                            const Icon(LucideIcons.check, size: 12, color: AppColors.success)
+                          else
+                            const SizedBox(height: 12),
+                        ],
+                      );
+                    }),
                   );
-                }),
+                },
+                loading: () => const SizedBox(height: 56),
+                error: (_, __) => const SizedBox(height: 56),
               ),
             ],
           ),

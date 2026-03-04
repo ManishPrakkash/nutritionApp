@@ -6,7 +6,6 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/prediction_result.dart';
 import '../providers/predictions_provider.dart';
-import '../../profile/screens/profile_screen.dart';
 
 class HealthRiskScreen extends ConsumerWidget {
   const HealthRiskScreen({super.key});
@@ -141,24 +140,6 @@ class HealthRiskScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                  // After biometrics update, run a fresh ML analysis
-                  // and then refresh the snapshot used both here and
-                  // on the dashboard.
-                  try {
-                    await ref.read(predictionsFutureProvider.future);
-                  } catch (_) {
-                    // Ignore ML/API errors here; the user can retry
-                    // via the error card button if needed.
-                  }
-                  ref.invalidate(latestPredictionProvider);
-                },
-                child: const Text('Update Biometrics'),
-              ),
               const SizedBox(height: 48),
             ],
           ),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../models/habit.dart';
+import '../../home/services/streak_service.dart';
 import 'habit_provider.dart';
 
 class BadgeProgress {
@@ -16,6 +17,8 @@ final userBadgesProvider = FutureProvider<List<BadgeProgress>>((ref) async {
   final allBadges = await ref.watch(badgesProvider.future);
   final streakData = await ref.watch(streakFutureProvider.future);
   final userId = ref.watch(authUserIdProvider);
+  // Use login-based streak from SharedPreferences (actual login data)
+  final loginStreak = await ref.watch(currentStreakProvider.future);
 
   if (userId == null) return [];
 
@@ -29,7 +32,7 @@ final userBadgesProvider = FutureProvider<List<BadgeProgress>>((ref) async {
     double progress = 0.0;
 
     if (badge.criteriaType == 'streak') {
-      final currentStreak = streakCount(streakData);
+      final currentStreak = loginStreak;
       progress = (currentStreak / badge.criteriaValue).clamp(0.0, 1.0);
       if (currentStreak >= badge.criteriaValue) {
         isEarned = true;
