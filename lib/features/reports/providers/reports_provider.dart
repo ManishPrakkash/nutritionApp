@@ -295,15 +295,23 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
     return _loadFromFirestore();
   }
 
-  /// Instant in-memory update when a meal is toggled eaten/uneaten.
-  void onMealToggled({required bool nowEaten}) {
+  /// Instant in-memory update of today's macro nutrients and calories.
+  /// Call after meal toggle or swap with the full current meal list.
+  void onNutrientsChanged({
+    required double protein,
+    required double carbs,
+    required double fat,
+    required int calories,
+    required int mealsEaten,
+    required int totalMeals,
+  }) {
     final current = state.valueOrNull;
     if (current == null) return;
-    final delta = nowEaten ? 1 : -1;
-    final newEaten = (current.mealsEaten + delta).clamp(0, current.totalMeals);
-    final mealPct = current.totalMeals > 0 ? newEaten / current.totalMeals : 0.0;
+    // Recalculate nutrition score from updated meal data
+    final mealPct = totalMeals > 0 ? mealsEaten / totalMeals : 0.0;
+    final avgCal = calories.toDouble();
     final calRatio = current.targetCalories > 0
-        ? current.avgCalories / current.targetCalories
+        ? avgCal / current.targetCalories
         : 0.0;
     final calScore = calRatio > 1.0
         ? (2.0 - calRatio).clamp(0.0, 1.0)
@@ -311,7 +319,12 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
     final newNutritionScore =
         ((mealPct * 0.4 + calScore * 0.6) * 100).clamp(0.0, 100.0);
     state = AsyncData(current.copyWith(
-      mealsEaten: newEaten,
+      totalProtein: protein,
+      totalCarbs: carbs,
+      totalFat: fat,
+      avgCalories: avgCal,
+      mealsEaten: mealsEaten,
+      totalMeals: totalMeals,
       nutritionScore: newNutritionScore,
     ));
   }
@@ -320,7 +333,17 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
   void onWorkoutPctChanged(double pct) {
     final current = state.valueOrNull;
     if (current == null) return;
-    state = AsyncData(current.copyWith(workoutCompletionPct: pct));
+    // Recalculate activity score using workout pct
+    final workoutRatio = (pct / 100).clamp(0.0, 1.0);
+    final stepRatio = current.targetSteps > 0
+        ? (current.avgSteps / current.targetSteps).clamp(0.0, 1.0)
+        : 0.0;
+    final newActivityScore =
+        ((stepRatio * 0.5 + workoutRatio * 0.5) * 100).clamp(0.0, 100.0);
+    state = AsyncData(current.copyWith(
+      workoutCompletionPct: pct,
+      activityScore: newActivityScore,
+    ));
   }
 
   Future<PerformanceReportData> _loadFromFirestore() async {
@@ -381,10 +404,13 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
         for (final m in meals) {
           totalMeals++;
           totalCal += m.calories;
-          totalProtein += m.protein;
-          totalCarbs += m.carbs;
-          totalFat += m.fat;
           if (m.isEaten) mealsEaten++;
+          // Nutrients are computed from today's meals only
+          if (d == todayDate) {
+            totalProtein += m.protein;
+            totalCarbs += m.carbs;
+            totalFat += m.fat;
+          }
         }
       } catch (_) {}
     }
@@ -454,6 +480,7 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
     final hasSleepData = sleepDays > 0;
     final hasHydrationData = waterDays > 0;
 
+    // ── Compute scores — 0% when no real data ──
     double nutritionScore;
     if (hasNutritionData) {
       final mealPct = totalMeals > 0 ? mealsEaten / totalMeals : 0.0;
@@ -465,20 +492,18 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
       nutritionScore =
           ((mealPct * 0.4 + calScore * 0.6) * 100).clamp(0.0, 100.0);
     } else {
-      nutritionScore = _fallbackNutritionScore(activityLevel);
+      nutritionScore = 0.0;
     }
 
     double activityScore;
-    if (hasActivityData) {
+    if (hasActivityData || todayWorkoutPct > 0) {
       final stepRatio =
           targetSteps > 0 ? (avgSteps / targetSteps).clamp(0.0, 1.0) : 0.0;
-      final workoutRatio = dates.isNotEmpty
-          ? (workoutsCompleted / dates.length).clamp(0.0, 1.0)
-          : 0.0;
+      final workoutRatio = (todayWorkoutPct / 100).clamp(0.0, 1.0);
       activityScore =
           ((stepRatio * 0.5 + workoutRatio * 0.5) * 100).clamp(0.0, 100.0);
     } else {
-      activityScore = _fallbackActivityScore(activityLevel);
+      activityScore = 0.0;
     }
 
     double sleepScore;
@@ -490,7 +515,7 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
               100)
           .clamp(0.0, 100.0);
     } else {
-      sleepScore = _fallbackSleepScore(activityLevel);
+      sleepScore = 0.0;
     }
 
     double hydrationScore;
@@ -499,7 +524,7 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
           (targetWater > 0 ? (avgWater / targetWater) * 100 : 0.0)
               .clamp(0.0, 100.0);
     } else {
-      hydrationScore = _fallbackHydrationScore(activityLevel);
+      hydrationScore = 0.0;
     }
 
     return PerformanceReportData(
@@ -533,54 +558,6 @@ class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Fallback helpers — reasonable scores from activity level
-// ---------------------------------------------------------------------------
-
-double _fallbackNutritionScore(String level) {
-  switch (level) {
-    case 'sedentary': return 55;
-    case 'light': return 60;
-    case 'moderate': return 65;
-    case 'active': return 72;
-    case 'extreme': return 78;
-    default: return 62;
-  }
-}
-
-double _fallbackActivityScore(String level) {
-  switch (level) {
-    case 'sedentary': return 30;
-    case 'light': return 45;
-    case 'moderate': return 58;
-    case 'active': return 70;
-    case 'extreme': return 82;
-    default: return 50;
-  }
-}
-
-double _fallbackSleepScore(String level) {
-  switch (level) {
-    case 'sedentary': return 72;
-    case 'light': return 70;
-    case 'moderate': return 75;
-    case 'active': return 68;
-    case 'extreme': return 65;
-    default: return 72;
-  }
-}
-
-double _fallbackHydrationScore(String level) {
-  switch (level) {
-    case 'sedentary': return 40;
-    case 'light': return 50;
-    case 'moderate': return 55;
-    case 'active': return 62;
-    case 'extreme': return 68;
-    default: return 50;
-  }
-}
-
 PerformanceReportData _fallbackReport({
   required double targetCalories,
   required int targetSteps,
@@ -592,24 +569,24 @@ PerformanceReportData _fallbackReport({
   required String reportDate,
 }) {
   return PerformanceReportData(
-    nutritionScore: _fallbackNutritionScore(activityLevel),
-    activityScore: _fallbackActivityScore(activityLevel),
-    sleepScore: _fallbackSleepScore(activityLevel),
-    hydrationScore: _fallbackHydrationScore(activityLevel),
-    totalCalories: (targetCalories * 6.5).round(),
-    avgCalories: targetCalories * 0.93,
-    totalProtein: 420,
-    totalCarbs: 1050,
-    totalFat: 350,
-    mealsEaten: 18,
-    totalMeals: 21,
-    workoutsCompleted: 4,
+    nutritionScore: 0.0,
+    activityScore: 0.0,
+    sleepScore: 0.0,
+    hydrationScore: 0.0,
+    totalCalories: 0,
+    avgCalories: 0.0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFat: 0,
+    mealsEaten: 0,
+    totalMeals: 0,
+    workoutsCompleted: 0,
     totalWorkoutDays: 7,
-    workoutCompletionPct: 57.0,
-    totalSteps: targetSteps * 5,
-    avgSteps: (targetSteps * 0.72).round(),
-    avgSleep: targetSleep * 0.9,
-    avgWater: targetWater * 0.55,
+    workoutCompletionPct: 0.0,
+    totalSteps: 0,
+    avgSteps: 0,
+    avgSleep: 0.0,
+    avgWater: 0.0,
     currentWeight: currentWeight,
     targetCalories: targetCalories,
     targetSteps: targetSteps,

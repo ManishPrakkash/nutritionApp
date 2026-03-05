@@ -470,23 +470,25 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromLTWH(0, 0, size.width, size.height).deflate(6);
-    const startAngle = -math.pi * 0.75;
-    const sweepAngle = math.pi * 1.5;
+    final p = progress.clamp(0.0, 1.0);
+    // Full circle when 100%, otherwise 270° arc
+    final bool isFull = p >= 1.0;
+    final double startAngle = isFull ? -math.pi / 2 : -math.pi * 0.75;
+    final double totalSweep = isFull ? math.pi * 2 : math.pi * 1.5;
 
     final trackPaint = Paint()
       ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, startAngle, sweepAngle, false, trackPaint);
+    canvas.drawArc(rect, startAngle, totalSweep, false, trackPaint);
 
     final progressPaint = Paint()
       ..color = progressColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, startAngle, sweepAngle * progress.clamp(0.0, 1.0),
-        false, progressPaint);
+    canvas.drawArc(rect, startAngle, totalSweep * p, false, progressPaint);
   }
 
   @override
