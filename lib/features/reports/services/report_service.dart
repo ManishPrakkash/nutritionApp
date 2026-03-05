@@ -72,8 +72,6 @@ class ReportService {
         _sectionTitle('Activity & Workouts'),
         _kv('Workout Status',
             '${data.workoutCompletionPct.round()}% completed'),
-        _kv('Total Steps', '${data.totalSteps}'),
-        _kv('Average Steps/Day', '${data.avgSteps}'),
         _kv('Steps Target', '${data.targetSteps}'),
         pw.SizedBox(height: 16),
 
@@ -85,14 +83,12 @@ class ReportService {
           cellStyle: const pw.TextStyle(fontSize: 10),
           cellAlignment: pw.Alignment.center,
           headers: [
-            'Avg Sleep (h)',
             'Target Sleep (h)',
             'Avg Water (L)',
             'Target Water (L)',
           ],
           data: [
             [
-              data.avgSleep.toStringAsFixed(1),
               data.targetSleep.toStringAsFixed(1),
               data.avgWater.toStringAsFixed(1),
               data.targetWater.toStringAsFixed(1),
@@ -186,7 +182,7 @@ class ReportService {
       padding: const pw.EdgeInsets.symmetric(vertical: 1),
       child: pw.Row(children: [
         pw.SizedBox(width: 16),
-        pw.Text('• $name: ',
+        pw.Text('- $name: ',
             style:
                 pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
         pw.Text('${grams.toStringAsFixed(1)} g',

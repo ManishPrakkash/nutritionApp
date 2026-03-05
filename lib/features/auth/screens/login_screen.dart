@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:health_nutrition_app/core/icons/lucide_fallback.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
@@ -105,6 +106,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await signInWithEmail(ref, _emailController.text.trim(),
           _passwordController.text);
+      if (!mounted) return;
+      // Persist login so the app skips login on next launch
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('setup_completed', true);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
