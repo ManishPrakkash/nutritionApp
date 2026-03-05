@@ -494,8 +494,8 @@ class _DailyViewState extends ConsumerState<_DailyView> {
       if (_doneMealIds.contains(m.id)) return m.copyWith(isEaten: true);
       return m;
     }).toList();
-    // Push updated nutrients to analytics
-    _pushNutrients();
+    // Push updated nutrients to analytics (deferred to avoid modifying provider during build)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pushNutrients());
   }
 
   void _handleSwap(Meal original, Meal replacement) {
