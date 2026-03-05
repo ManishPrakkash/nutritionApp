@@ -17,10 +17,10 @@ class HealthRiskScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Use the latest saved prediction snapshot so risk levels
-    // match the dashboard and stay static until a new
-    // analysis is explicitly run.
-    final asyncResult = ref.watch(latestPredictionProvider);
+    // Use the dynamic predictions provider so risk levels
+    // update automatically when profile, preferences, or
+    // lifestyle data changes.
+    final asyncResult = ref.watch(predictionsFutureProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -112,7 +112,7 @@ class HealthRiskScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 20),
                         OutlinedButton.icon(
-                          onPressed: () => ref.invalidate(latestPredictionProvider),
+                          onPressed: () => ref.invalidate(predictionsFutureProvider),
                           icon: const Icon(LucideIcons.refreshCcw, size: 16),
                           label: const Text('Retry Analysis'),
                         ),

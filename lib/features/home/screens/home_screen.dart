@@ -11,7 +11,6 @@ import '../widgets/summary_card.dart';
 import '../widgets/streak_card.dart';
 import '../widgets/risk_snapshot.dart';
 import '../services/streak_service.dart';
-import '../../health_risk/providers/predictions_provider.dart';
 import '../services/pedometer_service.dart';
 import '../../notifications/screens/notifications_screen.dart';
 import '../../meals/screens/meal_detail_screen.dart';
@@ -23,6 +22,7 @@ import '../../reports/screens/reports_screen.dart';
 import '../../grocery/screens/grocery_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../profile/providers/profile_provider.dart';
+import '../../health_risk/providers/predictions_provider.dart';
 import '../../workout/screens/workout_screen.dart';
 import '../../workout/providers/workout_provider.dart';
 import '../../../core/theme/app_theme.dart';
@@ -298,9 +298,7 @@ class _HomeTab extends ConsumerWidget {
             const SizedBox(height: 24),
             const StreakCard(),
             const SizedBox(height: 24),
-            RiskSnapshotWidget(
-              predictions: ref.watch(latestPredictionProvider).valueOrNull?.predictions,
-            ),
+            const RiskSnapshotWidget(),
             const SizedBox(height: 32),
             _SectionHeader(
               title: "Today's Meals",

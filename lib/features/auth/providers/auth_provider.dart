@@ -29,6 +29,8 @@ Future<void> signUpWithEmail(WidgetRef ref, String email, String password,
   if (cred?.user == null) return;
   final updatedProfile = profile.copyWith(uid: cred!.user!.uid);
   await AuthService.instance.createProfileAfterSignUp(updatedProfile, imageFile);
+  // Force profile provider to refresh with the new user data
+  ref.invalidate(profileFutureProvider);
 }
 
 Future<void> signInWithEmail(WidgetRef ref, String email, String password) async {

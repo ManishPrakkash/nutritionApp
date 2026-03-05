@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper: caller is the authenticated owner ──
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── Users collection ──
+    // users/{uid}                     – root user document
+    // users/{uid}/data/profile        – user profile
+    // users/{uid}/data/preferences    – user preferences
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /data/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Predictions (top-level, filtered by user_id field) ──
+    match /predictions/{docId} {
+      allow create: if request.auth != null
+                    && request.resource.data.user_id == request.auth.uid;
+      allow read:   if request.auth != null
+                    && resource.data.user_id == request.auth.uid;
+      allow update, delete: if request.auth != null
+                            && resource.data.user_id == request.auth.uid;
+    }
+
+    // ── Meal logs ──
+    // meal_logs/{uid}/days/{date}
+    match /meal_logs/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /days/{date} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Workout logs ──
+    // workout_logs/{uid}/days/{date}
+    match /workout_logs/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /days/{date} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Daily goals ──
+    // daily_goals/{uid}/days/{date}
+    match /daily_goals/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /days/{date} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Streaks & habit logs ──
+    // streaks/{uid}
+    match /streaks/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Weight logs ──
+    // weight_logs/{uid}/logs/{logId}
+    match /weight_logs/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /logs/{logId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ── Device data (steps, sleep, heart rate) ──
+    // device_data/{uid}/days/{date}
+    match /device_data/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /days/{date} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+  }
+}

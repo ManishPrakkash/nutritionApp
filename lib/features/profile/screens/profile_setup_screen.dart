@@ -147,6 +147,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       final sharedPrefs = await SharedPreferences.getInstance();
       await sharedPrefs.setBool('setup_completed', true);
       await sharedPrefs.setString('user_uid', uid);
+
+      // Refresh profile and predictions so HomeScreen shows fresh data immediately
+      ref.invalidate(profileFutureProvider);
       
     } catch (e) {
       if (mounted) {

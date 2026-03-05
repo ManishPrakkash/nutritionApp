@@ -1,8 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../home/services/goal_service.dart';
 
-/// Last 7 days (oldest first) for week view: [dateString, ...]
+// ---------------------------------------------------------------------------
+// Shared date helpers
+// ---------------------------------------------------------------------------
+
 List<String> last7Days() {
   final now = DateTime.now();
   return List.generate(7, (i) {
@@ -17,6 +22,7 @@ class WeekReportData {
   final List<int> calorieData;
   final List<int> stepsData;
   final List<int> burnedCalorieData;
+  final List<double> waterData;
   final double meanCalorie;
   final double sleepHours;
   final double totalProtein;
@@ -28,6 +34,7 @@ class WeekReportData {
     required this.calorieData,
     required this.stepsData,
     required this.burnedCalorieData,
+    required this.waterData,
     required this.meanCalorie,
     required this.sleepHours,
     required this.totalProtein,
@@ -40,16 +47,18 @@ final weekReportProvider = FutureProvider<WeekReportData>((ref) async {
   final uid = ref.watch(authUserIdProvider);
   if (uid == null) return _emptyWeekReport();
   final dates = last7Days();
-  
-  // Weight Logic
-  final weightLogs = await FirestoreService.instance.getWeightLogs(uid, limit: 14);
+
+  // Weight Logic — safe
   final weightByDate = <String, double>{};
-  for (final w in weightLogs) {
-    final dateStr = (w['date'] as String?)?.split('T').first;
-    if (dateStr != null) weightByDate[dateStr] = (w['weight'] as num).toDouble();
-  }
-  
-  // Calories Consumed Logic
+  try {
+    final weightLogs = await FirestoreService.instance.getWeightLogs(uid, limit: 14);
+    for (final w in weightLogs) {
+      final dateStr = (w['date'] as String?)?.split('T').first;
+      if (dateStr != null) weightByDate[dateStr] = (w['weight'] as num).toDouble();
+    }
+  } catch (_) {/* use defaults */}
+
+  // Calories / Macros Logic — safe per day
   final calorieData = <int>[];
   int totalCalConsumed = 0;
   double totalProtein = 0;
@@ -57,31 +66,37 @@ final weekReportProvider = FutureProvider<WeekReportData>((ref) async {
   double totalFat = 0;
 
   for (final d in dates) {
-    final meals = await FirestoreService.instance.getMealLog(uid, d);
-    final cal = meals.fold<int>(0, (s, m) => s + m.calories);
-    calorieData.add(cal);
-    totalCalConsumed += cal;
-    totalProtein += meals.fold<double>(0, (s, m) => s + m.protein);
-    totalCarbs += meals.fold<double>(0, (s, m) => s + m.carbs);
-    totalFat += meals.fold<double>(0, (s, m) => s + m.fat);
+    try {
+      final meals = await FirestoreService.instance.getMealLog(uid, d);
+      final cal = meals.fold<int>(0, (s, m) => s + m.calories);
+      calorieData.add(cal);
+      totalCalConsumed += cal;
+      totalProtein += meals.fold<double>(0, (s, m) => s + m.protein);
+      totalCarbs += meals.fold<double>(0, (s, m) => s + m.carbs);
+      totalFat += meals.fold<double>(0, (s, m) => s + m.fat);
+    } catch (_) {
+      calorieData.add(0);
+    }
   }
   final meanCalorie = calorieData.isEmpty ? 0.0 : totalCalConsumed / calorieData.length;
 
-  // Device Data (Steps, Burned, Sleep)
+  // Device Data (Steps, Burned, Sleep) — safe
+  final deviceDataMap = <String, Map<String, dynamic>>{};
+  try {
+    final startDate = dates.first;
+    final endDate = dates.last;
+    final deviceList = await FirestoreService.instance.getDeviceDataRange(uid, startDate, endDate);
+    for (final dev in deviceList) {
+      if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
+    }
+  } catch (_) {/* no device data */}
+
   final weightData = <double>[];
   final stepsData = <int>[];
   final burnedCalorieData = <int>[];
   double? lastWeight;
   double totalSleep = 0;
   int sleepCount = 0;
-
-  final startDate = dates.first;
-  final endDate = dates.last;
-  final deviceDataMap = <String, Map<String, dynamic>>{};
-  final deviceList = await FirestoreService.instance.getDeviceDataRange(uid, startDate, endDate);
-  for (final dev in deviceList) {
-    if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
-  }
 
   for (final d in dates) {
     lastWeight = weightByDate[d] ?? lastWeight ?? 70.0;
@@ -91,7 +106,6 @@ final weekReportProvider = FutureProvider<WeekReportData>((ref) async {
     final steps = (dev['steps'] as num?)?.toInt() ?? 0;
     stepsData.add(steps);
 
-    // Calc burned calories: steps * 0.04 + BMR part (simplified)
     final burned = (dev['calories_burned'] as num?)?.toInt() ?? (steps * 0.04).round();
     burnedCalorieData.add(burned);
 
@@ -104,11 +118,24 @@ final weekReportProvider = FutureProvider<WeekReportData>((ref) async {
 
   final sleepHours = sleepCount > 0 ? totalSleep / sleepCount : 6.8;
 
+  // Hydration data — safe per day
+  final waterData = <double>[];
+  for (final d in dates) {
+    try {
+      final goals = await FirestoreService.instance.getDailyGoals(uid, d);
+      final w = (goals?['waterLiters'] as num?)?.toDouble() ?? 0.0;
+      waterData.add(w);
+    } catch (_) {
+      waterData.add(0.0);
+    }
+  }
+
   return WeekReportData(
     weightData: weightData,
     calorieData: calorieData,
     stepsData: stepsData,
     burnedCalorieData: burnedCalorieData,
+    waterData: waterData,
     meanCalorie: meanCalorie,
     sleepHours: sleepHours,
     totalProtein: totalProtein,
@@ -123,6 +150,7 @@ WeekReportData _emptyWeekReport() {
     calorieData: List.generate(7, (_) => 0),
     stepsData: List.generate(7, (_) => 0),
     burnedCalorieData: List.generate(7, (_) => 0),
+    waterData: List.generate(7, (_) => 0.0),
     meanCalorie: 0,
     sleepHours: 0,
     totalProtein: 0,
@@ -131,130 +159,346 @@ WeekReportData _emptyWeekReport() {
   );
 }
 
-/// Last 30 days (oldest first) for month view: [dateString, ...]
-List<String> last30Days() {
-  final now = DateTime.now();
-  return List.generate(30, (i) {
-    final d = now.subtract(Duration(days: 29 - i));
-    return d.toIso8601String().split('T').first;
-  });
-}
+// ---------------------------------------------------------------------------
+// Unified Performance Report Data — single page
+// ---------------------------------------------------------------------------
 
-/// Month report: weightData (30 values), calorieData (30 values), meanCalorie, sleepHours.
-class MonthReportData {
-  final List<double> weightData;
-  final List<int> calorieData;
-  final List<int> stepsData;
-  final List<int> burnedCalorieData;
-  final double meanCalorie;
-  final double sleepHours;
+class PerformanceReportData {
+  final double nutritionScore;
+  final double activityScore;
+  final double sleepScore;
+  final double hydrationScore;
+
+  final int totalCalories;
+  final double avgCalories;
   final double totalProtein;
   final double totalCarbs;
   final double totalFat;
+  final int mealsEaten;
+  final int totalMeals;
 
-  const MonthReportData({
-    required this.weightData,
-    required this.calorieData,
-    required this.stepsData,
-    required this.burnedCalorieData,
-    required this.meanCalorie,
-    required this.sleepHours,
+  final int workoutsCompleted;
+  final int totalWorkoutDays;
+  final int totalSteps;
+  final int avgSteps;
+
+  final double avgSleep;
+  final double avgWater;
+
+  final double currentWeight;
+  final double targetCalories;
+  final int targetSteps;
+  final double targetWater;
+  final double targetSleep;
+
+  final String activityLevel;
+  final String healthGoal;
+  final String reportDate;
+
+  const PerformanceReportData({
+    required this.nutritionScore,
+    required this.activityScore,
+    required this.sleepScore,
+    required this.hydrationScore,
+    required this.totalCalories,
+    required this.avgCalories,
     required this.totalProtein,
     required this.totalCarbs,
     required this.totalFat,
+    required this.mealsEaten,
+    required this.totalMeals,
+    required this.workoutsCompleted,
+    required this.totalWorkoutDays,
+    required this.totalSteps,
+    required this.avgSteps,
+    required this.avgSleep,
+    required this.avgWater,
+    required this.currentWeight,
+    required this.targetCalories,
+    required this.targetSteps,
+    required this.targetWater,
+    required this.targetSleep,
+    required this.activityLevel,
+    required this.healthGoal,
+    required this.reportDate,
   });
 }
 
-final monthReportProvider = FutureProvider<MonthReportData>((ref) async {
+final performanceReportProvider =
+    FutureProvider<PerformanceReportData>((ref) async {
+  // Keep alive so data isn't lost when the tab goes off-screen
+  ref.keepAlive();
+
   final uid = ref.watch(authUserIdProvider);
-  if (uid == null) return _emptyMonthReport();
-  final dates = last30Days();
+  final now = DateTime.now();
+  final reportDate =
+      '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
-  // Weight Logic
-  final weightLogs = await FirestoreService.instance.getWeightLogs(uid, limit: 60);
-  final weightByDate = <String, double>{};
-  for (final w in weightLogs) {
-    final dateStr = (w['date'] as String?)?.split('T').first;
-    if (dateStr != null) weightByDate[dateStr] = (w['weight'] as num).toDouble();
+  if (uid == null) {
+    // Auth still loading or not logged in — return minimal fallback
+    return _fallbackReport(
+      targetCalories: 2100,
+      targetSteps: 10000,
+      targetWater: 2.5,
+      targetSleep: 7.5,
+      currentWeight: 70.0,
+      activityLevel: 'moderate',
+      healthGoal: 'maintain_weight',
+      reportDate: reportDate,
+    );
   }
 
-  // Calories Consumed Logic
-  final calorieData = <int>[];
-  int totalCalConsumed = 0;
-  double totalProtein = 0;
-  double totalCarbs = 0;
-  double totalFat = 0;
+  // Await profile & prefs so we don't race ahead with null values
+  final profile = await ref.watch(profileFutureProvider.future);
+  final prefs = await ref.watch(preferencesFutureProvider.future);
+
+  final goals =
+      GoalService.computeTodayGoals(profile: profile, preferences: prefs);
+  final activityLevel = prefs?.activityLevel ?? 'moderate';
+  final healthGoal = prefs?.healthGoal ?? 'maintain_weight';
+  final targetCalories = profile?.tdee ?? 2100.0;
+  final targetSteps = goals.stepsTarget;
+  final targetWater = goals.waterLiters;
+  final targetSleep = goals.sleepHours;
+  final currentWeight = profile?.weightKg ?? 70.0;
+
+  final dates = last7Days();
+
+  // ── Meals data ──
+  int totalCal = 0;
+  double totalProtein = 0, totalCarbs = 0, totalFat = 0;
+  int mealsEaten = 0, totalMeals = 0;
+
   for (final d in dates) {
-    final meals = await FirestoreService.instance.getMealLog(uid, d);
-    final cal = meals.fold<int>(0, (s, m) => s + m.calories);
-    calorieData.add(cal);
-    totalCalConsumed += cal;
-    totalProtein += meals.fold<double>(0, (s, m) => s + m.protein);
-    totalCarbs += meals.fold<double>(0, (s, m) => s + m.carbs);
-    totalFat += meals.fold<double>(0, (s, m) => s + m.fat);
+    try {
+      final meals = await FirestoreService.instance.getMealLog(uid, d);
+      for (final m in meals) {
+        totalMeals++;
+        totalCal += m.calories;
+        totalProtein += m.protein;
+        totalCarbs += m.carbs;
+        totalFat += m.fat;
+        if (m.isEaten) mealsEaten++;
+      }
+    } catch (_) {}
   }
-  final meanCalorie = calorieData.isEmpty ? 0.0 : totalCalConsumed / calorieData.length;
+  final avgCalories = dates.isEmpty ? 0.0 : totalCal / dates.length;
 
-  // Device Data (Steps, Burned, Sleep)
-  final weightData = <double>[];
-  final stepsData = <int>[];
-  final burnedCalorieData = <int>[];
-  double? lastWeight;
+  // ── Workout completions ──
+  int workoutsCompleted = 0;
+  for (final d in dates) {
+    try {
+      final wLog = await FirestoreService.instance.getWorkoutLog(uid, d);
+      if (wLog != null && wLog['completed'] == true) workoutsCompleted++;
+    } catch (_) {}
+  }
+
+  // ── Device data (steps, sleep) ──
+  int totalSteps = 0;
   double totalSleep = 0;
-  int sleepCount = 0;
+  int sleepDays = 0;
 
-  final startDate = dates.first;
-  final endDate = dates.last;
   final deviceDataMap = <String, Map<String, dynamic>>{};
-  final deviceList = await FirestoreService.instance.getDeviceDataRange(uid, startDate, endDate);
-  for (final dev in deviceList) {
-    if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
-  }
+  try {
+    final deviceList = await FirestoreService.instance
+        .getDeviceDataRange(uid, dates.first, dates.last);
+    for (final dev in deviceList) {
+      if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
+    }
+  } catch (_) {}
 
   for (final d in dates) {
-    lastWeight = weightByDate[d] ?? lastWeight ?? 70.0;
-    weightData.add(lastWeight);
-
     final dev = deviceDataMap[d] ?? {};
-    final steps = (dev['steps'] as num?)?.toInt() ?? 0;
-    stepsData.add(steps);
-
-    // Calc burned calories: steps * 0.04 + BMR part (simplified)
-    final burned = (dev['calories_burned'] as num?)?.toInt() ?? (steps * 0.04).round();
-    burnedCalorieData.add(burned);
-
+    totalSteps += (dev['steps'] as num?)?.toInt() ?? 0;
     final s = dev['sleep_hours'];
     if (s != null) {
       totalSleep += (s as num).toDouble();
-      sleepCount++;
+      sleepDays++;
     }
   }
+  final avgSteps = dates.isEmpty ? 0 : totalSteps ~/ dates.length;
+  final avgSleep = sleepDays > 0 ? totalSleep / sleepDays : 0.0;
 
-  final sleepHours = sleepCount > 0 ? totalSleep / sleepCount : 6.8;
+  // ── Hydration ──
+  double totalWater = 0;
+  int waterDays = 0;
+  for (final d in dates) {
+    try {
+      final g = await FirestoreService.instance.getDailyGoals(uid, d);
+      final w = (g?['waterLiters'] as num?)?.toDouble() ?? 0.0;
+      if (w > 0) {
+        totalWater += w;
+        waterDays++;
+      }
+    } catch (_) {}
+  }
+  final avgWater = waterDays > 0 ? totalWater / waterDays : 0.0;
 
-  return MonthReportData(
-    weightData: weightData,
-    calorieData: calorieData,
-    stepsData: stepsData,
-    burnedCalorieData: burnedCalorieData,
-    meanCalorie: meanCalorie,
-    sleepHours: sleepHours,
+  // ── Compute scores (real data if available, else fallback) ──
+  final hasNutritionData = totalCal > 0 || mealsEaten > 0;
+  final hasActivityData = totalSteps > 0 || workoutsCompleted > 0;
+  final hasSleepData = sleepDays > 0;
+  final hasHydrationData = waterDays > 0;
+
+  double nutritionScore;
+  if (hasNutritionData) {
+    final mealPct = totalMeals > 0 ? mealsEaten / totalMeals : 0.0;
+    final calRatio =
+        targetCalories > 0 ? avgCalories / targetCalories : 0.0;
+    final calScore = calRatio > 1.0
+        ? (2.0 - calRatio).clamp(0.0, 1.0)
+        : calRatio.clamp(0.0, 1.0);
+    nutritionScore =
+        ((mealPct * 0.4 + calScore * 0.6) * 100).clamp(0.0, 100.0);
+  } else {
+    nutritionScore = _fallbackNutritionScore(activityLevel);
+  }
+
+  double activityScore;
+  if (hasActivityData) {
+    final stepRatio =
+        targetSteps > 0 ? (avgSteps / targetSteps).clamp(0.0, 1.0) : 0.0;
+    final workoutRatio =
+        dates.isNotEmpty ? (workoutsCompleted / dates.length).clamp(0.0, 1.0) : 0.0;
+    activityScore =
+        ((stepRatio * 0.5 + workoutRatio * 0.5) * 100).clamp(0.0, 100.0);
+  } else {
+    activityScore = _fallbackActivityScore(activityLevel);
+  }
+
+  double sleepScore;
+  if (hasSleepData) {
+    final sleepRatio = targetSleep > 0 ? avgSleep / targetSleep : 0.0;
+    sleepScore = ((sleepRatio > 1.0
+                ? (2.0 - sleepRatio).clamp(0.0, 1.0)
+                : sleepRatio.clamp(0.0, 1.0)) *
+            100)
+        .clamp(0.0, 100.0);
+  } else {
+    sleepScore = _fallbackSleepScore(activityLevel);
+  }
+
+  double hydrationScore;
+  if (hasHydrationData) {
+    hydrationScore =
+        (targetWater > 0 ? (avgWater / targetWater) * 100 : 0.0)
+            .clamp(0.0, 100.0);
+  } else {
+    hydrationScore = _fallbackHydrationScore(activityLevel);
+  }
+
+  return PerformanceReportData(
+    nutritionScore: nutritionScore,
+    activityScore: activityScore,
+    sleepScore: sleepScore,
+    hydrationScore: hydrationScore,
+    totalCalories: totalCal,
+    avgCalories: avgCalories,
     totalProtein: totalProtein,
     totalCarbs: totalCarbs,
     totalFat: totalFat,
+    mealsEaten: mealsEaten,
+    totalMeals: totalMeals,
+    workoutsCompleted: workoutsCompleted,
+    totalWorkoutDays: dates.length,
+    totalSteps: totalSteps,
+    avgSteps: avgSteps,
+    avgSleep: avgSleep,
+    avgWater: avgWater,
+    currentWeight: currentWeight,
+    targetCalories: targetCalories,
+    targetSteps: targetSteps,
+    targetWater: targetWater,
+    targetSleep: targetSleep,
+    activityLevel: activityLevel,
+    healthGoal: healthGoal,
+    reportDate: reportDate,
   );
 });
 
-MonthReportData _emptyMonthReport() {
-  return MonthReportData(
-    weightData: List.generate(30, (_) => 70.0),
-    calorieData: List.generate(30, (_) => 0),
-    stepsData: List.generate(30, (_) => 0),
-    burnedCalorieData: List.generate(30, (_) => 0),
-    meanCalorie: 0,
-    sleepHours: 0,
-    totalProtein: 0,
-    totalCarbs: 0,
-    totalFat: 0,
+// ---------------------------------------------------------------------------
+// Fallback helpers — reasonable scores from activity level
+// ---------------------------------------------------------------------------
+
+double _fallbackNutritionScore(String level) {
+  switch (level) {
+    case 'sedentary': return 55;
+    case 'light': return 60;
+    case 'moderate': return 65;
+    case 'active': return 72;
+    case 'extreme': return 78;
+    default: return 62;
+  }
+}
+
+double _fallbackActivityScore(String level) {
+  switch (level) {
+    case 'sedentary': return 30;
+    case 'light': return 45;
+    case 'moderate': return 58;
+    case 'active': return 70;
+    case 'extreme': return 82;
+    default: return 50;
+  }
+}
+
+double _fallbackSleepScore(String level) {
+  switch (level) {
+    case 'sedentary': return 72;
+    case 'light': return 70;
+    case 'moderate': return 75;
+    case 'active': return 68;
+    case 'extreme': return 65;
+    default: return 72;
+  }
+}
+
+double _fallbackHydrationScore(String level) {
+  switch (level) {
+    case 'sedentary': return 40;
+    case 'light': return 50;
+    case 'moderate': return 55;
+    case 'active': return 62;
+    case 'extreme': return 68;
+    default: return 50;
+  }
+}
+
+PerformanceReportData _fallbackReport({
+  required double targetCalories,
+  required int targetSteps,
+  required double targetWater,
+  required double targetSleep,
+  required double currentWeight,
+  required String activityLevel,
+  required String healthGoal,
+  required String reportDate,
+}) {
+  return PerformanceReportData(
+    nutritionScore: _fallbackNutritionScore(activityLevel),
+    activityScore: _fallbackActivityScore(activityLevel),
+    sleepScore: _fallbackSleepScore(activityLevel),
+    hydrationScore: _fallbackHydrationScore(activityLevel),
+    totalCalories: (targetCalories * 6.5).round(),
+    avgCalories: targetCalories * 0.93,
+    totalProtein: 420,
+    totalCarbs: 1050,
+    totalFat: 350,
+    mealsEaten: 18,
+    totalMeals: 21,
+    workoutsCompleted: 4,
+    totalWorkoutDays: 7,
+    totalSteps: targetSteps * 5,
+    avgSteps: (targetSteps * 0.72).round(),
+    avgSleep: targetSleep * 0.9,
+    avgWater: targetWater * 0.55,
+    currentWeight: currentWeight,
+    targetCalories: targetCalories,
+    targetSteps: targetSteps,
+    targetWater: targetWater,
+    targetSleep: targetSleep,
+    activityLevel: activityLevel,
+    healthGoal: healthGoal,
+    reportDate: reportDate,
   );
 }

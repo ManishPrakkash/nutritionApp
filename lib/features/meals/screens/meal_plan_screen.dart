@@ -602,26 +602,9 @@ class _MealCardState extends ConsumerState<_MealCard> {
             .recordSwap(widget.date, widget.meal.mealType, alternatives.first);
         widget.onMealSwapped(alternatives.first);
         if (mounted) setState(() => _swapped = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Swapped to "${alternatives.first.name}"'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No alternatives available'),
-            backgroundColor: AppColors.warning,
-          ),
-        );
       }
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Swap failed. Try again.')),
-        );
-      }
+      // silently handle swap failure
     }
     if (mounted) setState(() => _swapping = false);
   }

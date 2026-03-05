@@ -161,12 +161,6 @@ class ProfileScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 48),
-              OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(LucideIcons.download, size: 16),
-                label: const Text('Data Dossier'),
-              ),
-              const SizedBox(height: 16),
               TextButton.icon(
                 onPressed: () async {
                   await signOut(ref);

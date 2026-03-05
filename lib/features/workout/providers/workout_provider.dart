@@ -40,16 +40,16 @@ class ExerciseCompletionNotifier extends StateNotifier<Map<String, bool>> {
   Future<void> _loadFromFirestore() async {
     if (_uid == null) return;
     final data = await FirestoreService.instance.getWorkoutLog(_uid, _date);
-    if (data == null) return;
+    if (data == null || !mounted) return;
     // Only restore completion if the stored workoutId matches current workout
     final storedId = data['workoutId'] as String? ?? '';
     if (storedId != _workoutId) {
       // Different workout → start fresh (clear old data)
-      state = {};
+      if (mounted) state = {};
       return;
     }
     final exercises = data['completedExercises'] as Map<String, dynamic>? ?? {};
-    state = exercises.map((k, v) => MapEntry(k, v == true));
+    if (mounted) state = exercises.map((k, v) => MapEntry(k, v == true));
   }
 
   void toggle(String exerciseName) {
