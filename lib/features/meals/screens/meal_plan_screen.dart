@@ -114,35 +114,47 @@ class _DailyTabContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return weeklyPlanAsync.when(
-      data: (planMap) {
-        // Use same plan as Weekly: meals for selected date from JSON
-        List<Meal>? meals = planMap[selectedDate];
-        if (meals != null && meals.isNotEmpty) {
-          return _DailyView(
-            meals: meals,
-            targetCal: targetCal,
-            date: selectedDate,
-            leading: null,
-          );
-        }
-        // Selected date outside 7-day window: fetch from same JSON source (getMealPlan)
-        return mealForSelectedDate.when(
-          data: (fallbackMeals) => _DailyView(
-            meals: fallbackMeals,
-            targetCal: targetCal,
-            date: selectedDate,
-            leading: null,
-          ),
-          loading: () => const Center(
-              child: CircularProgressIndicator(color: AppColors.primary)),
-          error: (e, __) => Center(child: Text('Error: $e')),
+    // Use previous data during refresh to avoid unmounting _DailyView
+    // (which would lose local done-state). Only show spinner on first load.
+    final planMap = weeklyPlanAsync.valueOrNull;
+    final fallbackMeals = mealForSelectedDate.valueOrNull;
+
+    if (planMap != null) {
+      final meals = planMap[selectedDate];
+      if (meals != null && meals.isNotEmpty) {
+        return _DailyView(
+          meals: meals,
+          targetCal: targetCal,
+          date: selectedDate,
+          leading: null,
         );
-      },
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary)),
-      error: (e, __) => Center(child: Text('Error: $e')),
-    );
+      }
+    }
+
+    // No weekly data for this date — try the per-date provider
+    if (fallbackMeals != null && fallbackMeals.isNotEmpty) {
+      return _DailyView(
+        meals: fallbackMeals,
+        targetCal: targetCal,
+        date: selectedDate,
+        leading: null,
+      );
+    }
+
+    // Truly loading for the first time (no cached data)
+    if (weeklyPlanAsync.isLoading || mealForSelectedDate.isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary));
+    }
+
+    // Error with no cached data
+    final error = weeklyPlanAsync.error ?? mealForSelectedDate.error;
+    if (error != null) {
+      return Center(child: Text('Error: $error'));
+    }
+
+    return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary));
   }
 }
 
@@ -469,13 +481,21 @@ class _DailyViewState extends ConsumerState<_DailyView> {
     for (final m in _meals) {
       if (m.isEaten) _doneMealIds.add(m.id);
     }
+    // Push initial nutrients so analytics reflects today's meals
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pushNutrients());
   }
 
   @override
   void didUpdateWidget(covariant _DailyView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Keep local state in sync with the latest JSON-based plan
-    _meals = List<Meal>.from(widget.meals);
+    // Merge: keep local done state + pick up isEaten from Firestore-merged data
+    _meals = widget.meals.map((m) {
+      if (m.isEaten) _doneMealIds.add(m.id);
+      if (_doneMealIds.contains(m.id)) return m.copyWith(isEaten: true);
+      return m;
+    }).toList();
+    // Push updated nutrients to analytics
+    _pushNutrients();
   }
 
   void _handleSwap(Meal original, Meal replacement) {
@@ -491,6 +511,24 @@ class _DailyViewState extends ConsumerState<_DailyView> {
     if (uid != null) {
       FirestoreService.instance.saveMealLog(uid, widget.date, _meals);
     }
+    _pushNutrients();
+  }
+
+  /// Recalculate today's macros from the local meal list and push instantly.
+  void _pushNutrients() {
+    final protein = _meals.fold<double>(0, (s, m) => s + m.protein);
+    final carbs = _meals.fold<double>(0, (s, m) => s + m.carbs);
+    final fat = _meals.fold<double>(0, (s, m) => s + m.fat);
+    final calories = _meals.fold<int>(0, (s, m) => s + m.calories);
+    final eaten = _meals.where((m) => _doneMealIds.contains(m.id)).length;
+    ref.read(performanceReportProvider.notifier).onNutrientsChanged(
+          protein: protein,
+          carbs: carbs,
+          fat: fat,
+          calories: calories,
+          mealsEaten: eaten,
+          totalMeals: _meals.length,
+        );
   }
 
   void _toggleDone(String mealId) {
@@ -506,14 +544,13 @@ class _DailyViewState extends ConsumerState<_DailyView> {
         return m;
       }).toList();
     });
-    // Persist updated meals to Firestore so analytics sees the change
-    final nowEaten = _doneMealIds.contains(mealId);
+    // Persist updated meals to Firestore
     final uid = ref.read(authUserIdProvider);
     if (uid != null) {
       FirestoreService.instance.saveMealLog(uid, widget.date, _meals);
-      // Instantly update analytics without full Firestore re-fetch
-      ref.read(performanceReportProvider.notifier).onMealToggled(nowEaten: nowEaten);
     }
+    // Instantly update all analytics (nutrients, calories, scores)
+    _pushNutrients();
   }
 
   int get _totalCal => _meals.fold(0, (s, m) => s + m.calories);

@@ -39,6 +39,42 @@ Map<String, List<Meal>> _applySwapsToMap(
   return planMap.map((date, meals) => MapEntry(date, _applySwaps(meals, overrides, date)));
 }
 
+/// Merge isEaten flags from Firestore into a list of meals.
+/// Matches by meal type (breakfast, lunch, etc.) since meal ids may differ.
+List<Meal> _mergeIsEaten(List<Meal> meals, List<Meal> stored) {
+  if (stored.isEmpty) return meals;
+  // Build set of mealType:id that are eaten in Firestore
+  final eatenByType = <String, bool>{};
+  final eatenById = <String, bool>{};
+  for (final s in stored) {
+    if (s.isEaten) {
+      eatenByType[s.mealType.toLowerCase()] = true;
+      eatenById[s.id] = true;
+    }
+  }
+  return meals.map((m) {
+    if (eatenById.containsKey(m.id) || eatenByType.containsKey(m.mealType.toLowerCase())) {
+      return m.copyWith(isEaten: true);
+    }
+    return m;
+  }).toList();
+}
+
+/// Merge isEaten flags across a date→meals map.
+Future<Map<String, List<Meal>>> _mergeIsEatenMap(
+    String uid, Map<String, List<Meal>> planMap) async {
+  final result = <String, List<Meal>>{};
+  for (final entry in planMap.entries) {
+    try {
+      final stored = await FirestoreService.instance.getMealLog(uid, entry.key);
+      result[entry.key] = _mergeIsEaten(entry.value, stored);
+    } catch (_) {
+      result[entry.key] = entry.value;
+    }
+  }
+  return result;
+}
+
 final mealPlanProvider = FutureProvider.family<List<Meal>, String>((ref, date) async {
   final uid = ref.watch(authUserIdProvider);
   if (uid == null) return [];
@@ -46,9 +82,15 @@ final mealPlanProvider = FutureProvider.family<List<Meal>, String>((ref, date) a
   final prefs = await ref.watch(preferencesFutureProvider.future);
   final overrides = ref.watch(mealSwapOverridesProvider);
   final meals = await ApiService.instance.getMealPlan(uid, date, profile: profile, prefs: prefs);
-  final result = _applySwaps(meals, overrides, date);
-  // Persist to Firestore so performance analytics can read real meal data
-  FirestoreService.instance.saveMealLog(uid, date, result);
+  final swapped = _applySwaps(meals, overrides, date);
+  // Merge isEaten flags from Firestore so done states survive rebuilds
+  final stored = await FirestoreService.instance.getMealLog(uid, date);
+  final result = _mergeIsEaten(swapped, stored);
+  // Persist only if no stored data yet (first load); otherwise let
+  // the UI (toggleDone / handleSwap) manage saves to avoid clobbering isEaten.
+  if (stored.isEmpty) {
+    FirestoreService.instance.saveMealLog(uid, date, result);
+  }
   return result;
 });
 
@@ -116,7 +158,9 @@ final weeklyMealPlanProvider = FutureProvider<Map<String, List<Meal>>>((ref) asy
   final overrides = ref.watch(mealSwapOverridesProvider);
   final tomorrow = DateTime.now().add(const Duration(days: 1)).toIso8601String().split('T').first;
   final plan = await ApiService.instance.getWeeklyMealPlan(uid, tomorrow, profile: profile, prefs: prefs);
-  return _applySwapsToMap(plan, overrides);
+  final swapped = _applySwapsToMap(plan, overrides);
+  // Merge isEaten flags from Firestore so done states survive rebuilds
+  return _mergeIsEatenMap(uid, swapped);
 });
 
 /// Get monthly meal plan for the FULL current calendar month (1st to last day).
