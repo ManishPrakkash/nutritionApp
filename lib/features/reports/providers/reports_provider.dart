@@ -179,6 +179,7 @@ class PerformanceReportData {
 
   final int workoutsCompleted;
   final int totalWorkoutDays;
+  final double workoutCompletionPct;
   final int totalSteps;
   final int avgSteps;
 
@@ -209,6 +210,7 @@ class PerformanceReportData {
     required this.totalMeals,
     required this.workoutsCompleted,
     required this.totalWorkoutDays,
+    this.workoutCompletionPct = 0.0,
     required this.totalSteps,
     required this.avgSteps,
     required this.avgSleep,
@@ -222,199 +224,314 @@ class PerformanceReportData {
     required this.healthGoal,
     required this.reportDate,
   });
+
+  PerformanceReportData copyWith({
+    double? nutritionScore,
+    double? activityScore,
+    double? sleepScore,
+    double? hydrationScore,
+    int? totalCalories,
+    double? avgCalories,
+    double? totalProtein,
+    double? totalCarbs,
+    double? totalFat,
+    int? mealsEaten,
+    int? totalMeals,
+    int? workoutsCompleted,
+    int? totalWorkoutDays,
+    double? workoutCompletionPct,
+    int? totalSteps,
+    int? avgSteps,
+    double? avgSleep,
+    double? avgWater,
+    double? currentWeight,
+    double? targetCalories,
+    int? targetSteps,
+    double? targetWater,
+    double? targetSleep,
+    String? activityLevel,
+    String? healthGoal,
+    String? reportDate,
+  }) {
+    return PerformanceReportData(
+      nutritionScore: nutritionScore ?? this.nutritionScore,
+      activityScore: activityScore ?? this.activityScore,
+      sleepScore: sleepScore ?? this.sleepScore,
+      hydrationScore: hydrationScore ?? this.hydrationScore,
+      totalCalories: totalCalories ?? this.totalCalories,
+      avgCalories: avgCalories ?? this.avgCalories,
+      totalProtein: totalProtein ?? this.totalProtein,
+      totalCarbs: totalCarbs ?? this.totalCarbs,
+      totalFat: totalFat ?? this.totalFat,
+      mealsEaten: mealsEaten ?? this.mealsEaten,
+      totalMeals: totalMeals ?? this.totalMeals,
+      workoutsCompleted: workoutsCompleted ?? this.workoutsCompleted,
+      totalWorkoutDays: totalWorkoutDays ?? this.totalWorkoutDays,
+      workoutCompletionPct: workoutCompletionPct ?? this.workoutCompletionPct,
+      totalSteps: totalSteps ?? this.totalSteps,
+      avgSteps: avgSteps ?? this.avgSteps,
+      avgSleep: avgSleep ?? this.avgSleep,
+      avgWater: avgWater ?? this.avgWater,
+      currentWeight: currentWeight ?? this.currentWeight,
+      targetCalories: targetCalories ?? this.targetCalories,
+      targetSteps: targetSteps ?? this.targetSteps,
+      targetWater: targetWater ?? this.targetWater,
+      targetSleep: targetSleep ?? this.targetSleep,
+      activityLevel: activityLevel ?? this.activityLevel,
+      healthGoal: healthGoal ?? this.healthGoal,
+      reportDate: reportDate ?? this.reportDate,
+    );
+  }
 }
 
 final performanceReportProvider =
-    FutureProvider<PerformanceReportData>((ref) async {
-  // Keep alive so data isn't lost when the tab goes off-screen
-  ref.keepAlive();
+    AsyncNotifierProvider<PerformanceReportNotifier, PerformanceReportData>(
+        PerformanceReportNotifier.new);
 
-  final uid = ref.watch(authUserIdProvider);
-  final now = DateTime.now();
-  final reportDate =
-      '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-
-  if (uid == null) {
-    // Auth still loading or not logged in — return minimal fallback
-    return _fallbackReport(
-      targetCalories: 2100,
-      targetSteps: 10000,
-      targetWater: 2.5,
-      targetSleep: 7.5,
-      currentWeight: 70.0,
-      activityLevel: 'moderate',
-      healthGoal: 'maintain_weight',
-      reportDate: reportDate,
-    );
+class PerformanceReportNotifier extends AsyncNotifier<PerformanceReportData> {
+  @override
+  Future<PerformanceReportData> build() async {
+    ref.keepAlive();
+    return _loadFromFirestore();
   }
 
-  // Await profile & prefs so we don't race ahead with null values
-  final profile = await ref.watch(profileFutureProvider.future);
-  final prefs = await ref.watch(preferencesFutureProvider.future);
-
-  final goals =
-      GoalService.computeTodayGoals(profile: profile, preferences: prefs);
-  final activityLevel = prefs?.activityLevel ?? 'moderate';
-  final healthGoal = prefs?.healthGoal ?? 'maintain_weight';
-  final targetCalories = profile?.tdee ?? 2100.0;
-  final targetSteps = goals.stepsTarget;
-  final targetWater = goals.waterLiters;
-  final targetSleep = goals.sleepHours;
-  final currentWeight = profile?.weightKg ?? 70.0;
-
-  final dates = last7Days();
-
-  // ── Meals data ──
-  int totalCal = 0;
-  double totalProtein = 0, totalCarbs = 0, totalFat = 0;
-  int mealsEaten = 0, totalMeals = 0;
-
-  for (final d in dates) {
-    try {
-      final meals = await FirestoreService.instance.getMealLog(uid, d);
-      for (final m in meals) {
-        totalMeals++;
-        totalCal += m.calories;
-        totalProtein += m.protein;
-        totalCarbs += m.carbs;
-        totalFat += m.fat;
-        if (m.isEaten) mealsEaten++;
-      }
-    } catch (_) {}
-  }
-  final avgCalories = dates.isEmpty ? 0.0 : totalCal / dates.length;
-
-  // ── Workout completions ──
-  int workoutsCompleted = 0;
-  for (final d in dates) {
-    try {
-      final wLog = await FirestoreService.instance.getWorkoutLog(uid, d);
-      if (wLog != null && wLog['completed'] == true) workoutsCompleted++;
-    } catch (_) {}
-  }
-
-  // ── Device data (steps, sleep) ──
-  int totalSteps = 0;
-  double totalSleep = 0;
-  int sleepDays = 0;
-
-  final deviceDataMap = <String, Map<String, dynamic>>{};
-  try {
-    final deviceList = await FirestoreService.instance
-        .getDeviceDataRange(uid, dates.first, dates.last);
-    for (final dev in deviceList) {
-      if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
-    }
-  } catch (_) {}
-
-  for (final d in dates) {
-    final dev = deviceDataMap[d] ?? {};
-    totalSteps += (dev['steps'] as num?)?.toInt() ?? 0;
-    final s = dev['sleep_hours'];
-    if (s != null) {
-      totalSleep += (s as num).toDouble();
-      sleepDays++;
-    }
-  }
-  final avgSteps = dates.isEmpty ? 0 : totalSteps ~/ dates.length;
-  final avgSleep = sleepDays > 0 ? totalSleep / sleepDays : 0.0;
-
-  // ── Hydration ──
-  double totalWater = 0;
-  int waterDays = 0;
-  for (final d in dates) {
-    try {
-      final g = await FirestoreService.instance.getDailyGoals(uid, d);
-      final w = (g?['waterLiters'] as num?)?.toDouble() ?? 0.0;
-      if (w > 0) {
-        totalWater += w;
-        waterDays++;
-      }
-    } catch (_) {}
-  }
-  final avgWater = waterDays > 0 ? totalWater / waterDays : 0.0;
-
-  // ── Compute scores (real data if available, else fallback) ──
-  final hasNutritionData = totalCal > 0 || mealsEaten > 0;
-  final hasActivityData = totalSteps > 0 || workoutsCompleted > 0;
-  final hasSleepData = sleepDays > 0;
-  final hasHydrationData = waterDays > 0;
-
-  double nutritionScore;
-  if (hasNutritionData) {
-    final mealPct = totalMeals > 0 ? mealsEaten / totalMeals : 0.0;
-    final calRatio =
-        targetCalories > 0 ? avgCalories / targetCalories : 0.0;
+  /// Instant in-memory update when a meal is toggled eaten/uneaten.
+  void onMealToggled({required bool nowEaten}) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    final delta = nowEaten ? 1 : -1;
+    final newEaten = (current.mealsEaten + delta).clamp(0, current.totalMeals);
+    final mealPct = current.totalMeals > 0 ? newEaten / current.totalMeals : 0.0;
+    final calRatio = current.targetCalories > 0
+        ? current.avgCalories / current.targetCalories
+        : 0.0;
     final calScore = calRatio > 1.0
         ? (2.0 - calRatio).clamp(0.0, 1.0)
         : calRatio.clamp(0.0, 1.0);
-    nutritionScore =
+    final newNutritionScore =
         ((mealPct * 0.4 + calScore * 0.6) * 100).clamp(0.0, 100.0);
-  } else {
-    nutritionScore = _fallbackNutritionScore(activityLevel);
+    state = AsyncData(current.copyWith(
+      mealsEaten: newEaten,
+      nutritionScore: newNutritionScore,
+    ));
   }
 
-  double activityScore;
-  if (hasActivityData) {
-    final stepRatio =
-        targetSteps > 0 ? (avgSteps / targetSteps).clamp(0.0, 1.0) : 0.0;
-    final workoutRatio =
-        dates.isNotEmpty ? (workoutsCompleted / dates.length).clamp(0.0, 1.0) : 0.0;
-    activityScore =
-        ((stepRatio * 0.5 + workoutRatio * 0.5) * 100).clamp(0.0, 100.0);
-  } else {
-    activityScore = _fallbackActivityScore(activityLevel);
+  /// Instant in-memory update when workout exercise completion changes.
+  void onWorkoutPctChanged(double pct) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(workoutCompletionPct: pct));
   }
 
-  double sleepScore;
-  if (hasSleepData) {
-    final sleepRatio = targetSleep > 0 ? avgSleep / targetSleep : 0.0;
-    sleepScore = ((sleepRatio > 1.0
-                ? (2.0 - sleepRatio).clamp(0.0, 1.0)
-                : sleepRatio.clamp(0.0, 1.0)) *
-            100)
-        .clamp(0.0, 100.0);
-  } else {
-    sleepScore = _fallbackSleepScore(activityLevel);
-  }
+  Future<PerformanceReportData> _loadFromFirestore() async {
+    final uid = ref.watch(authUserIdProvider);
+    final now = DateTime.now();
+    final reportDate =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
-  double hydrationScore;
-  if (hasHydrationData) {
-    hydrationScore =
-        (targetWater > 0 ? (avgWater / targetWater) * 100 : 0.0)
-            .clamp(0.0, 100.0);
-  } else {
-    hydrationScore = _fallbackHydrationScore(activityLevel);
-  }
+    if (uid == null) {
+      return _fallbackReport(
+        targetCalories: 2100,
+        targetSteps: 10000,
+        targetWater: 2.5,
+        targetSleep: 7.5,
+        currentWeight: 70.0,
+        activityLevel: 'moderate',
+        healthGoal: 'maintain_weight',
+        reportDate: reportDate,
+      );
+    }
 
-  return PerformanceReportData(
-    nutritionScore: nutritionScore,
-    activityScore: activityScore,
-    sleepScore: sleepScore,
-    hydrationScore: hydrationScore,
-    totalCalories: totalCal,
-    avgCalories: avgCalories,
-    totalProtein: totalProtein,
-    totalCarbs: totalCarbs,
-    totalFat: totalFat,
-    mealsEaten: mealsEaten,
-    totalMeals: totalMeals,
-    workoutsCompleted: workoutsCompleted,
-    totalWorkoutDays: dates.length,
-    totalSteps: totalSteps,
-    avgSteps: avgSteps,
-    avgSleep: avgSleep,
-    avgWater: avgWater,
-    currentWeight: currentWeight,
-    targetCalories: targetCalories,
-    targetSteps: targetSteps,
-    targetWater: targetWater,
-    targetSleep: targetSleep,
-    activityLevel: activityLevel,
-    healthGoal: healthGoal,
-    reportDate: reportDate,
-  );
-});
+    final profile = await ref.watch(profileFutureProvider.future);
+    final prefs = await ref.watch(preferencesFutureProvider.future);
+
+    final goals =
+        GoalService.computeTodayGoals(profile: profile, preferences: prefs);
+    final activityLevel = prefs?.activityLevel ?? 'moderate';
+    final healthGoal = prefs?.healthGoal ?? 'maintain_weight';
+    final targetCalories = profile?.tdee ?? 2100.0;
+    final currentWeight = profile?.weightKg ?? 70.0;
+
+    final todayDate = now.toIso8601String().split('T').first;
+    final userDayGoals =
+        await FirestoreService.instance.getDailyGoals(uid, todayDate);
+    final userWater = (userDayGoals?['waterLiters'] as num?)?.toDouble();
+    final userSteps = (userDayGoals?['steps'] as num?)?.toInt();
+    final userSleep = (userDayGoals?['sleepHours'] as num?)?.toDouble();
+    final targetSteps = (userSteps != null && userSteps > 0)
+        ? userSteps
+        : goals.stepsTarget;
+    final targetWater = (userWater != null && userWater > 0)
+        ? userWater
+        : goals.waterLiters;
+    final targetSleep = (userSleep != null && userSleep > 0)
+        ? userSleep
+        : goals.sleepHours;
+
+    final dates = last7Days();
+
+    // ── Meals data ──
+    int totalCal = 0;
+    double totalProtein = 0, totalCarbs = 0, totalFat = 0;
+    int mealsEaten = 0, totalMeals = 0;
+
+    for (final d in dates) {
+      try {
+        final meals = await FirestoreService.instance.getMealLog(uid, d);
+        for (final m in meals) {
+          totalMeals++;
+          totalCal += m.calories;
+          totalProtein += m.protein;
+          totalCarbs += m.carbs;
+          totalFat += m.fat;
+          if (m.isEaten) mealsEaten++;
+        }
+      } catch (_) {}
+    }
+    final avgCalories = dates.isEmpty ? 0.0 : totalCal / dates.length;
+
+    // ── Workout completions & today's exercise pct ──
+    int workoutsCompleted = 0;
+    double todayWorkoutPct = 0.0;
+    for (final d in dates) {
+      try {
+        final wLog = await FirestoreService.instance.getWorkoutLog(uid, d);
+        if (wLog != null && wLog['completed'] == true) workoutsCompleted++;
+        if (d == todayDate && wLog != null) {
+          final ce = wLog['completedExercises'] as Map<String, dynamic>?;
+          if (ce != null && ce.isNotEmpty) {
+            final done = ce.values.where((v) => v == true).length;
+            todayWorkoutPct = (done / ce.length * 100).clamp(0.0, 100.0);
+          }
+        }
+      } catch (_) {}
+    }
+
+    // ── Device data (steps, sleep) ──
+    int totalSteps = 0;
+    double totalSleep = 0;
+    int sleepDays = 0;
+
+    final deviceDataMap = <String, Map<String, dynamic>>{};
+    try {
+      final deviceList = await FirestoreService.instance
+          .getDeviceDataRange(uid, dates.first, dates.last);
+      for (final dev in deviceList) {
+        if (dev['date'] != null) deviceDataMap[dev['date']] = dev;
+      }
+    } catch (_) {}
+
+    for (final d in dates) {
+      final dev = deviceDataMap[d] ?? {};
+      totalSteps += (dev['steps'] as num?)?.toInt() ?? 0;
+      final s = dev['sleep_hours'];
+      if (s != null) {
+        totalSleep += (s as num).toDouble();
+        sleepDays++;
+      }
+    }
+    final avgSteps = dates.isEmpty ? 0 : totalSteps ~/ dates.length;
+    final avgSleep = sleepDays > 0 ? totalSleep / sleepDays : 0.0;
+
+    // ── Hydration ──
+    double totalWater = 0;
+    int waterDays = 0;
+    for (final d in dates) {
+      try {
+        final g = await FirestoreService.instance.getDailyGoals(uid, d);
+        final w = (g?['waterLiters'] as num?)?.toDouble() ?? 0.0;
+        if (w > 0) {
+          totalWater += w;
+          waterDays++;
+        }
+      } catch (_) {}
+    }
+    final avgWater = waterDays > 0 ? totalWater / waterDays : 0.0;
+
+    // ── Compute scores ──
+    final hasNutritionData = totalCal > 0 || mealsEaten > 0;
+    final hasActivityData = totalSteps > 0 || workoutsCompleted > 0;
+    final hasSleepData = sleepDays > 0;
+    final hasHydrationData = waterDays > 0;
+
+    double nutritionScore;
+    if (hasNutritionData) {
+      final mealPct = totalMeals > 0 ? mealsEaten / totalMeals : 0.0;
+      final calRatio =
+          targetCalories > 0 ? avgCalories / targetCalories : 0.0;
+      final calScore = calRatio > 1.0
+          ? (2.0 - calRatio).clamp(0.0, 1.0)
+          : calRatio.clamp(0.0, 1.0);
+      nutritionScore =
+          ((mealPct * 0.4 + calScore * 0.6) * 100).clamp(0.0, 100.0);
+    } else {
+      nutritionScore = _fallbackNutritionScore(activityLevel);
+    }
+
+    double activityScore;
+    if (hasActivityData) {
+      final stepRatio =
+          targetSteps > 0 ? (avgSteps / targetSteps).clamp(0.0, 1.0) : 0.0;
+      final workoutRatio = dates.isNotEmpty
+          ? (workoutsCompleted / dates.length).clamp(0.0, 1.0)
+          : 0.0;
+      activityScore =
+          ((stepRatio * 0.5 + workoutRatio * 0.5) * 100).clamp(0.0, 100.0);
+    } else {
+      activityScore = _fallbackActivityScore(activityLevel);
+    }
+
+    double sleepScore;
+    if (hasSleepData) {
+      final sleepRatio = targetSleep > 0 ? avgSleep / targetSleep : 0.0;
+      sleepScore = ((sleepRatio > 1.0
+                  ? (2.0 - sleepRatio).clamp(0.0, 1.0)
+                  : sleepRatio.clamp(0.0, 1.0)) *
+              100)
+          .clamp(0.0, 100.0);
+    } else {
+      sleepScore = _fallbackSleepScore(activityLevel);
+    }
+
+    double hydrationScore;
+    if (hasHydrationData) {
+      hydrationScore =
+          (targetWater > 0 ? (avgWater / targetWater) * 100 : 0.0)
+              .clamp(0.0, 100.0);
+    } else {
+      hydrationScore = _fallbackHydrationScore(activityLevel);
+    }
+
+    return PerformanceReportData(
+      nutritionScore: nutritionScore,
+      activityScore: activityScore,
+      sleepScore: sleepScore,
+      hydrationScore: hydrationScore,
+      totalCalories: totalCal,
+      avgCalories: avgCalories,
+      totalProtein: totalProtein,
+      totalCarbs: totalCarbs,
+      totalFat: totalFat,
+      mealsEaten: mealsEaten,
+      totalMeals: totalMeals,
+      workoutsCompleted: workoutsCompleted,
+      totalWorkoutDays: dates.length,
+      workoutCompletionPct: todayWorkoutPct,
+      totalSteps: totalSteps,
+      avgSteps: avgSteps,
+      avgSleep: avgSleep,
+      avgWater: avgWater,
+      currentWeight: currentWeight,
+      targetCalories: targetCalories,
+      targetSteps: targetSteps,
+      targetWater: targetWater,
+      targetSleep: targetSleep,
+      activityLevel: activityLevel,
+      healthGoal: healthGoal,
+      reportDate: reportDate,
+    );
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Fallback helpers — reasonable scores from activity level
@@ -488,6 +605,7 @@ PerformanceReportData _fallbackReport({
     totalMeals: 21,
     workoutsCompleted: 4,
     totalWorkoutDays: 7,
+    workoutCompletionPct: 57.0,
     totalSteps: targetSteps * 5,
     avgSteps: (targetSteps * 0.72).round(),
     avgSleep: targetSleep * 0.9,

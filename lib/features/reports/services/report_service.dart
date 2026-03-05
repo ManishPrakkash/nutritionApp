@@ -70,8 +70,8 @@ class ReportService {
 
         // ── Activity & Workouts ──
         _sectionTitle('Activity & Workouts'),
-        _kv('Workouts Completed',
-            '${data.workoutsCompleted} / ${data.totalWorkoutDays} days'),
+        _kv('Workout Status',
+            '${data.workoutCompletionPct.round()}% completed'),
         _kv('Total Steps', '${data.totalSteps}'),
         _kv('Average Steps/Day', '${data.avgSteps}'),
         _kv('Steps Target', '${data.targetSteps}'),

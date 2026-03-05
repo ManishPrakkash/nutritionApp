@@ -79,9 +79,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final existing = await FirestoreService.instance.getDailyGoals(uid, today);
     if (existing != null) {
       // Check if all 3 goals were actually filled (non-zero)
-      final water = (existing['water'] as num?)?.toDouble() ?? 0;
+      final water = (existing['waterLiters'] as num?)?.toDouble() ?? 0;
       final steps = (existing['steps'] as num?)?.toInt() ?? 0;
-      final sleep = (existing['sleep'] as num?)?.toDouble() ?? 0;
+      final sleep = (existing['sleepHours'] as num?)?.toDouble() ?? 0;
       if (water > 0 && steps > 0 && sleep > 0) return; // All set
     }
     if (!mounted) return;
@@ -96,6 +96,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         defaultSleep: 0,
       );
     }
+    // Refresh dashboard so new goals appear immediately
+    ref.invalidate(todayDailyGoalsProvider);
   }
 
   @override
@@ -216,46 +218,46 @@ class _HomeTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider).valueOrNull;
     final prefs = ref.watch(preferencesFutureProvider).valueOrNull;
-    // Use the latest saved prediction snapshot so kcal goal and
-    // risk assessment stay static until a new assessment is run.
     final predictions = ref.watch(latestPredictionProvider).valueOrNull;
     final currentSteps = ref.watch(currentStepsProvider);
-    final goals = GoalService.computeTodayGoals(profile: profile, preferences: prefs);
+    final uid = ref.watch(authUserIdProvider);
+    final today = DateTime.now().toIso8601String().split('T').first;
 
-    // Derive today's kcal goal from base prediction/TDEE and today's
-    // water/steps/sleep/BMI goals. This value is static for the day
-    // because `computeTodayGoals` is date-based.
+    // Read user-entered daily goals from Firestore (set via popup)
+    final dailyGoalsAsync = uid == null
+        ? const AsyncValue<Map<String, dynamic>?>.data(null)
+        : ref.watch(todayDailyGoalsProvider(uid));
+    final dailyGoals = dailyGoalsAsync.valueOrNull;
+    final waterTarget = (dailyGoals?['waterLiters'] as num?)?.toDouble() ?? 0.0;
+    final stepsTarget = (dailyGoals?['steps'] as num?)?.toInt() ?? 0;
+    final sleepTarget = (dailyGoals?['sleepHours'] as num?)?.toDouble() ?? 0.0;
+
+    // GoalService defaults used for calorie adjustment fallback
+    final defaultGoals = GoalService.computeTodayGoals(profile: profile, preferences: prefs);
+
     final baseCalories = predictions?.calorieTarget ?? profile?.tdee ?? 2166.0;
-
-    // Use the goals to nudge the kcal target so it conceptually reflects
-    // "for this water/steps/sleep/BMI plan, this many kcal will be done".
     double targetCalDouble = baseCalories;
 
-    // Adjust for steps goal: around ±300 kcal when far from 10k steps.
-    const baselineSteps = 10000;
-    final stepsDelta = (goals.stepsTarget - baselineSteps).toDouble();
-    targetCalDouble += (stepsDelta * 0.03); // 0.03 kcal per step delta
+    // Use user-entered goals for calorie adjustments, fall back to defaults
+    final effectiveSteps = stepsTarget > 0 ? stepsTarget : defaultGoals.stepsTarget;
+    final effectiveSleep = sleepTarget > 0 ? sleepTarget : defaultGoals.sleepHours;
 
-    // Adjust for sleep goal relative to 7.5h.
+    const baselineSteps = 10000;
+    final stepsDelta = (effectiveSteps - baselineSteps).toDouble();
+    targetCalDouble += (stepsDelta * 0.03);
+
     const baselineSleep = 7.5;
-    final sleepDelta = goals.sleepHours - baselineSleep;
-    targetCalDouble += sleepDelta * 40.0; // ~40 kcal per hour difference
+    final sleepDelta = effectiveSleep - baselineSleep;
+    targetCalDouble += sleepDelta * 40.0;
 
     final targetCal = targetCalDouble.round();
 
-    final uid = ref.watch(authUserIdProvider);
-    final today = DateTime.now().toIso8601String().split('T').first;
-    final todayMealsAsync = uid == null
-      ? const AsyncValue<List<Meal>>.data([])
-      : ref.watch(_todayMealsProvider((uid, today)));
-
+    // Use mealPlanProvider (same source as meals preview) for calories consumed
+    final todayMealsAsync = ref.watch(mealPlanProvider(today));
     final meals = todayMealsAsync.value ?? const <Meal>[];
     final consumed = meals.fold<int>(0, (sum, m) => sum + m.calories);
 
-    // TODO: Wire real water & sleep data from device logs when available.
-    final water = 0.0;      // dynamic placeholder until actual intake is tracked
     final steps = currentSteps;
-    final sleep = 6.5;      // placeholder for sleep hours from last night
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -288,12 +290,12 @@ class _HomeTab extends ConsumerWidget {
             SummaryCard(
               caloriesConsumed: consumed,
               caloriesTarget: targetCal,
-              waterLiters: water,
+              waterLiters: waterTarget,
               steps: steps,
-              sleepHours: sleep,
-              waterTargetLiters: goals.waterLiters,
-              stepsTarget: goals.stepsTarget,
-              sleepTargetHours: goals.sleepHours,
+              sleepHours: sleepTarget,
+              waterTargetLiters: waterTarget,
+              stepsTarget: stepsTarget,
+              sleepTargetHours: sleepTarget,
             ),
             const SizedBox(height: 24),
             const StreakCard(),
@@ -325,13 +327,6 @@ class _HomeTab extends ConsumerWidget {
   }
 }
 
-typedef _TodayKey = (String uid, String date);
-
-final _todayMealsProvider = FutureProvider.family<List<Meal>, _TodayKey>((ref, key) async {
-  final (uid, date) = key;
-  return FirestoreService.instance.getMealLog(uid, date);
-});
-
 typedef _TodayWorkoutKey = (String uid, String date);
 
 final _todayWorkoutProvider =
@@ -339,6 +334,12 @@ final _todayWorkoutProvider =
         (ref, key) async {
   final (uid, date) = key;
   return FirestoreService.instance.getWorkoutLog(uid, date);
+});
+
+final todayDailyGoalsProvider =
+    FutureProvider.family<Map<String, dynamic>?, String>((ref, uid) async {
+  final today = DateTime.now().toIso8601String().split('T').first;
+  return FirestoreService.instance.getDailyGoals(uid, today);
 });
 
 class _SectionHeader extends StatelessWidget {

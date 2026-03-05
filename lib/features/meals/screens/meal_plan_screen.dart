@@ -5,8 +5,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/meal.dart';
+import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../health_risk/providers/predictions_provider.dart';
+import '../../reports/providers/reports_provider.dart';
 import '../providers/meal_provider.dart';
 import 'meal_detail_screen.dart';
 
@@ -438,7 +440,7 @@ class _MonthlyMealView extends ConsumerWidget {
   }
 }
 
-class _DailyView extends StatefulWidget {
+class _DailyView extends ConsumerStatefulWidget {
   final List<Meal> meals;
   final int targetCal;
   final String date;
@@ -452,10 +454,10 @@ class _DailyView extends StatefulWidget {
   });
 
   @override
-  State<_DailyView> createState() => _DailyViewState();
+  ConsumerState<_DailyView> createState() => _DailyViewState();
 }
 
-class _DailyViewState extends State<_DailyView> {
+class _DailyViewState extends ConsumerState<_DailyView> {
   late List<Meal> _meals;
   final Set<String> _doneMealIds = {};
 
@@ -463,6 +465,10 @@ class _DailyViewState extends State<_DailyView> {
   void initState() {
     super.initState();
     _meals = List<Meal>.from(widget.meals);
+    // Restore done state from persisted isEaten flags
+    for (final m in _meals) {
+      if (m.isEaten) _doneMealIds.add(m.id);
+    }
   }
 
   @override
@@ -480,6 +486,11 @@ class _DailyViewState extends State<_DailyView> {
         _meals[index] = replacement;
       }
     });
+    // Persist swapped meals to Firestore so analytics reflects the swap
+    final uid = ref.read(authUserIdProvider);
+    if (uid != null) {
+      FirestoreService.instance.saveMealLog(uid, widget.date, _meals);
+    }
   }
 
   void _toggleDone(String mealId) {
@@ -489,7 +500,20 @@ class _DailyViewState extends State<_DailyView> {
       } else {
         _doneMealIds.add(mealId);
       }
+      // Update isEaten on the Meal objects
+      _meals = _meals.map((m) {
+        if (m.id == mealId) return m.copyWith(isEaten: _doneMealIds.contains(mealId));
+        return m;
+      }).toList();
     });
+    // Persist updated meals to Firestore so analytics sees the change
+    final nowEaten = _doneMealIds.contains(mealId);
+    final uid = ref.read(authUserIdProvider);
+    if (uid != null) {
+      FirestoreService.instance.saveMealLog(uid, widget.date, _meals);
+      // Instantly update analytics without full Firestore re-fetch
+      ref.read(performanceReportProvider.notifier).onMealToggled(nowEaten: nowEaten);
+    }
   }
 
   int get _totalCal => _meals.fold(0, (s, m) => s + m.calories);

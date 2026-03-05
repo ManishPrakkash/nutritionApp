@@ -132,23 +132,9 @@ class _PerformanceContent extends ConsumerWidget {
           children: [
             Expanded(
                 child: _MetricCard(
-                    title: 'Workouts Done',
+                    title: 'Workout Status',
                     value:
-                        '${data.workoutsCompleted} / ${data.totalWorkoutDays}')),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _MetricCard(
-                    title: 'Avg Steps',
-                    value: '${data.avgSteps}')),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-                child: _MetricCard(
-                    title: 'Total Steps',
-                    value: '${data.totalSteps}')),
+                        '${data.workoutCompletionPct.round()}%')),
             const SizedBox(width: 12),
             Expanded(
                 child: _MetricCard(
@@ -162,20 +148,6 @@ class _PerformanceContent extends ConsumerWidget {
         Text('Sleep & Hydration',
             style: AppTypography.textTheme.titleMedium),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-                child: _MetricCard(
-                    title: 'Avg Sleep',
-                    value: '${data.avgSleep.toStringAsFixed(1)} h')),
-            const SizedBox(width: 12),
-            Expanded(
-                child: _MetricCard(
-                    title: 'Avg Water',
-                    value: '${data.avgWater.toStringAsFixed(1)} L')),
-          ],
-        ),
-        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(

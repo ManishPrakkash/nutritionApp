@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../models/workout.dart';
+import '../../reports/providers/reports_provider.dart';
 import '../providers/workout_provider.dart';
 
 class WorkoutScreen extends ConsumerStatefulWidget {
@@ -199,7 +200,11 @@ class _TodayWorkoutContent extends ConsumerWidget {
         ...plan.warmUp.map((e) => _ExerciseTile(
               exercise: e,
               done: completionMap[e.name] == true,
-              onToggle: () => notifier.toggle(e.name),
+              onToggle: () {
+                notifier.toggle(e.name);
+                final pct = (notifier.progress(total) * 100).clamp(0.0, 100.0);
+                ref.read(performanceReportProvider.notifier).onWorkoutPctChanged(pct);
+              },
             )),
 
         const SizedBox(height: 20),
@@ -208,7 +213,11 @@ class _TodayWorkoutContent extends ConsumerWidget {
         ...plan.mainExercises.map((e) => _ExerciseTile(
               exercise: e,
               done: completionMap[e.name] == true,
-              onToggle: () => notifier.toggle(e.name),
+              onToggle: () {
+                notifier.toggle(e.name);
+                final pct = (notifier.progress(total) * 100).clamp(0.0, 100.0);
+                ref.read(performanceReportProvider.notifier).onWorkoutPctChanged(pct);
+              },
             )),
 
         const SizedBox(height: 20),
@@ -217,7 +226,11 @@ class _TodayWorkoutContent extends ConsumerWidget {
         ...plan.coolDown.map((e) => _ExerciseTile(
               exercise: e,
               done: completionMap[e.name] == true,
-              onToggle: () => notifier.toggle(e.name),
+              onToggle: () {
+                notifier.toggle(e.name);
+                final pct = (notifier.progress(total) * 100).clamp(0.0, 100.0);
+                ref.read(performanceReportProvider.notifier).onWorkoutPctChanged(pct);
+              },
             )),
 
         const SizedBox(height: 24),

@@ -46,7 +46,10 @@ final mealPlanProvider = FutureProvider.family<List<Meal>, String>((ref, date) a
   final prefs = await ref.watch(preferencesFutureProvider.future);
   final overrides = ref.watch(mealSwapOverridesProvider);
   final meals = await ApiService.instance.getMealPlan(uid, date, profile: profile, prefs: prefs);
-  return _applySwaps(meals, overrides, date);
+  final result = _applySwaps(meals, overrides, date);
+  // Persist to Firestore so performance analytics can read real meal data
+  FirestoreService.instance.saveMealLog(uid, date, result);
+  return result;
 });
 
 /// Last N days date strings (oldest first).
