@@ -42,7 +42,7 @@ class HealthNutritionApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ZenFuel AI',
+      title: 'Nutriapp',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const LogoScreen(),

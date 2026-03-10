@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'ZenFuel AI';
+  static const String appName = 'Nutriapp';
   static const String tagline = 'Personalized Nutrition & Health';
 
   // API — ML/backend base URL (zenhealth-app on Render)

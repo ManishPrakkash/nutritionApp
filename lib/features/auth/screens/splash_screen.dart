@@ -213,7 +213,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     child: Column(
                       children: [
                         Text(
-                          'ZenFuel AI',
+                          'Nutriapp',
                           style: AppTypography.textTheme.displaySmall?.copyWith(
                             color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/images/logo.jpeg" alt="ZenFuel AI Logo" width="120" height="120" style="border-radius: 20px;" />
+  <img src="assets/images/logo.jpeg" alt="Nutriapp Logo" width="120" height="120" style="border-radius: 20px;" />
 </p>
 
-<h1 align="center">ZenFuel AI</h1>
+<h1 align="center"></h1>
 
 <p align="center">
   <strong>Know Your Body. Own Your Health.</strong><br/>
@@ -46,11 +46,11 @@
 
 ## Overview
 
-**ZenFuel AI** is a comprehensive, AI-powered health and nutrition mobile application that provides personalized meal plans, workout routines, health risk predictions, and real-time analytics — all calibrated to each user's body metrics, dietary preferences, and fitness goals.
+**Nutriapp** is a comprehensive, AI-powered health and nutrition mobile application that provides personalized meal plans, workout routines, health risk predictions, and real-time analytics — all calibrated to each user's body metrics, dietary preferences, and fitness goals.
 
 The app combines **Firebase** for real-time cloud infrastructure, **Riverpod** for reactive state management, and a **Machine Learning backend** (hosted on Render) that runs Random Forest, Gradient Boosting, and Ridge Regression models to deliver personalized health insights.
 
-### What Makes ZenFuel AI Different
+### What Makes Nutriapp Different
 
 | Aspect | Description |
 |--------|-------------|
